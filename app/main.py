@@ -3,6 +3,10 @@ from app.config import settings
 from contextlib import asynccontextmanager
 from app.database import init_db
 from logging import INFO, basicConfig, getLogger
+from fastapi import Depends
+from sqlmodel import Session
+from .database import get_session
+from sqlalchemy import text
 
 def get_app() -> FastAPI:
     app = FastAPI(title=f"{settings.APP_NAME} ({settings.ENV})", debug=settings.DEBUG)
@@ -24,6 +28,11 @@ async def lifespan(app: FastAPI):
     logger.info("Finished shutting down.")
 
 app = get_app()
+
+@app.get("/test-db")
+def test_db(session: Session = Depends(get_session)):
+    result = session.exec(text("SELECT 1"))
+    return {"result": result.scalar()}
 
 
 @app.get("/")
