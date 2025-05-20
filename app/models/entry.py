@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
+from .dictionaryEntry import DictionaryEntryLink
 
 if TYPE_CHECKING:
     from .dictionary import Dictionary
@@ -14,4 +15,4 @@ class Entry(SQLModel, table=True):
     created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
-    dictionaries: List["Dictionary"] = Relationship(back_populates="entries", link_model="DictionaryEntryLink")
+    dictionaries: List["Dictionary"] = Relationship(back_populates="entries", link_model=DictionaryEntryLink)

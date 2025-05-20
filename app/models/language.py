@@ -1,9 +1,11 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
+from .countryLanguage import CountryLanguageLink
 
 if TYPE_CHECKING:
     from .country import Country
+    from .countryLanguage import CountryLanguageLink
     from .dictionary import Dictionary
 
 
@@ -15,11 +17,11 @@ class Language(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 
-    countries: List[Country] = Relationship(
+    countries: List["Country"] = Relationship(
         back_populates="languages",
-        link_model="CountryLanguageLink"
+        link_model=CountryLanguageLink
         )
     
-    source_dictionaries: List[Dictionary] = Relationship(back_populates="source_language", sa_relationship_kwargs={"foreign_keys": "[Dictionary.source_language_id]"})
-    target_dictionaries: List[Dictionary] = Relationship(back_populates="target_language", sa_relationship_kwargs={"foreign_keys": "[Dictionary.target_language_id]"})
+    source_dictionaries: List["Dictionary"] = Relationship(back_populates="source_language", sa_relationship_kwargs={"foreign_keys": "[Dictionary.source_language_id]"})
+    target_dictionaries: List["Dictionary"] = Relationship(back_populates="target_language", sa_relationship_kwargs={"foreign_keys": "[Dictionary.target_language_id]"})
 

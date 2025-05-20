@@ -7,13 +7,20 @@ from fastapi import Depends
 from sqlmodel import Session
 from .database import get_session
 from sqlalchemy import text
+from app.models.user import User
+from app.models.language import Language
+from app.models.entry import Entry
+from app.models.dictionary import Dictionary
+from app.models.description import Description
+from app.models.dictionaryEntry import DictionaryEntryLink
+from app.models.country import Country
+from app.models.countryLanguage import CountryLanguageLink
+
 
 def get_app() -> FastAPI:
-    app = FastAPI(title=f"{settings.APP_NAME} ({settings.ENV})", debug=settings.DEBUG)
+    app = FastAPI(title=f"{settings.APP_NAME} ({settings.ENV})", debug=settings.DEBUG, lifespan=lifespan)
     # app.include_router(product.router)
     return app
-
-FastAPI(title=f"{settings.APP_NAME} ({settings.ENV})", debug=settings.DEBUG)
 
 logger = getLogger(__name__)
 basicConfig(level=INFO)

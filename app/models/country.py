@@ -1,9 +1,10 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
+from .countryLanguage import CountryLanguageLink
 
 if TYPE_CHECKING:
-    from .Language import Language
+    from .language import Language
 
 
 class Country(SQLModel, table=True):
@@ -15,7 +16,7 @@ class Country(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 
-    languages: List[Language] = Relationship(
+    languages: List["Language"] = Relationship(
         back_populates="countries",
-        link_model="CountryLanguageLink"
+        link_model=CountryLanguageLink
         )
