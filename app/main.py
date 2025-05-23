@@ -15,11 +15,11 @@ from app.models.description import Description
 from app.models.dictionaryEntry import DictionaryEntryLink
 from app.models.country import Country
 from app.models.countryLanguage import CountryLanguageLink
+from app.routes import language
 
 
 def get_app() -> FastAPI:
     app = FastAPI(title=f"{settings.APP_NAME} ({settings.ENV})", debug=settings.DEBUG, lifespan=lifespan)
-    # app.include_router(product.router)
     return app
 
 logger = getLogger(__name__)
@@ -35,6 +35,8 @@ async def lifespan(app: FastAPI):
     logger.info("Finished shutting down.")
 
 app = get_app()
+
+app.include_router(language.router, prefix="/language", tags=["Languages"])
 
 @app.get("/test-db")
 def test_db(session: Session = Depends(get_session)):
