@@ -1,15 +1,19 @@
-from sqlmodel import SQLModel, Field, Relationship
-from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
+from typing import TYPE_CHECKING, List, Optional
+
+from sqlmodel import Field, Relationship, SQLModel
+
 from .dictionaryEntry import DictionaryEntryLink
 
 if TYPE_CHECKING:
+    from .entry import Entry
     from .language import Language
     from .user import User
-    from .entry import Entry
 
 
 class Dictionary(SQLModel, table=True):
+    """Define a Dictionary Model."""
+
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
 
@@ -20,7 +24,19 @@ class Dictionary(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 
-    source_language: Optional["Language"] = Relationship(back_populates="source_dictionaries", sa_relationship_kwargs={"foreign_keys": "[Dictionary.source_language_id]"})
-    target_language: Optional["Language"] = Relationship(back_populates="target_dictionaries", sa_relationship_kwargs={"foreign_keys": "[Dictionary.target_language_id]"})
+    source_language: Optional["Language"] = Relationship(
+        back_populates="source_dictionaries",
+        sa_relationship_kwargs={
+            "foreign_keys": "[Dictionary.source_language_id]"
+        },
+    )
+    target_language: Optional["Language"] = Relationship(
+        back_populates="target_dictionaries",
+        sa_relationship_kwargs={
+            "foreign_keys": "[Dictionary.target_language_id]"
+        },
+    )
     user: Optional["User"] = Relationship(back_populates="dictionaries")
-    entries: List["Entry"] = Relationship(back_populates="dictionaries", link_model=DictionaryEntryLink)
+    entries: List["Entry"] = Relationship(
+        back_populates="dictionaries", link_model=DictionaryEntryLink
+    )
