@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 
@@ -24,7 +26,7 @@ def get_language_by_id(
     ).first()
 
 
-@router.post("/", response_model=LanguageRead, status_code=201)
+@router.post("/", response_model=List[LanguageRead], status_code=201)
 def create_language(
     language: LanguageCreate, session: Session = Depends(get_session)
 ):
@@ -33,4 +35,4 @@ def create_language(
     session.add(db_language)
     session.commit()
     session.refresh(db_language)
-    return db_language
+    return [db_language]

@@ -1,4 +1,4 @@
-from logging import INFO, basicConfig, getLogger
+from logging import getLogger
 from typing import Generator
 
 from sqlmodel import Session, SQLModel, create_engine
@@ -6,9 +6,8 @@ from sqlmodel import Session, SQLModel, create_engine
 from app.config import settings
 
 log = getLogger(__name__)
-basicConfig(level=INFO)
 
-engine = create_engine(settings.database_url, echo=settings.DEBUG)
+engine = create_engine(settings.database_url)
 
 
 def init_db():
