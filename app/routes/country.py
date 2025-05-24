@@ -8,6 +8,8 @@ from sqlmodel import Session, select
 from app.database import engine, get_session
 from app.dto.country import CountryCreate, CountryRead
 from app.models.country import Country
+from app.models.countryLanguage import CountryLanguageLink
+from app.models.language import Language
 
 router = APIRouter()
 _logger = getLogger(__name__)
@@ -42,7 +44,7 @@ def create_country(
 
 
 def load_csv_at_startup():
-    """Import countries from CSV into the database."""
+    """Load countries and languages from CSV at startup."""
     csv_path = Path("data/country_list.csv")
     with open(csv_path, newline="", encoding="utf-8") as csvfile:
         reader = csv.DictReader(csvfile)
@@ -50,20 +52,39 @@ def load_csv_at_startup():
 
     with Session(engine) as session:
         for row in countries:
-            existing = session.exec(
+            existing_country = session.exec(
                 select(Country).where(Country.code == row["country_code"])
             ).first()
 
-            if existing:
+            if existing_country:
                 continue
 
             country = Country(
                 name=row["country_name"],
                 code=row["country_code"],
+                latitude=row.get("latitude"),
+                longitude=row.get("longitude"),
             )
             session.add(country)
+            session.flush()
+
+            lang_name = row.get("lang_name", "").strip()
+            lang_code = row.get("lang_code", "").strip()
+
+            if lang_name and lang_code:
+                language = session.exec(
+                    select(Language).where(Language.code == lang_code)
+                ).first()
+
+                if not language:
+                    language = Language(name=lang_name, code=lang_code)
+                    session.add(language)
+                    session.flush()
+
+                link = CountryLanguageLink(
+                    country_id=country.id, language_id=language.id
+                )
+                session.add(link)
 
         session.commit()
-
-    _logger.info("%s rows processed from CSV.", len(countries))
-    return countries
+        return countries
