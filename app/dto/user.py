@@ -1,9 +1,7 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from sqlmodel import SQLModel
-
-from app.dto.dictionary import DictionaryRead
 
 
 class UserCreate(SQLModel):
@@ -26,4 +24,3 @@ class UserRead(SQLModel):
     is_superuser: Optional[bool] = False
     created_at: datetime
     updated_at: datetime
-    dictionaries: Optional[List[DictionaryRead]]
