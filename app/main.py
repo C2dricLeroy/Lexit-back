@@ -11,7 +11,11 @@ from app.routes import language
 
 def get_app() -> FastAPI:
     """Return the fastapi App instance."""
-    fastapi_app = FastAPI(title=f"{settings.APP_NAME} ({settings.ENV})", debug=settings.DEBUG, lifespan=lifespan)
+    fastapi_app = FastAPI(
+        title=f"{settings.APP_NAME} ({settings.ENV})",
+        debug=settings.DEBUG,
+        lifespan=lifespan,
+    )
     return fastapi_app
 
 
@@ -31,10 +35,18 @@ async def lifespan(app: FastAPI):
 
 app = get_app()
 
-app.include_router(language.router, prefix=f"/{settings.API_VERSION}/language", tags=["Languages"])
+app.include_router(
+    language.router,
+    prefix=f"/{settings.API_VERSION}/language",
+    tags=["Languages"],
+)
 
 
 @app.get("/")
 def read_root():
     """Root Method."""
-    return {"env": settings.ENV, "debug": settings.DEBUG, "message": "Hello from Lexit!"}
+    return {
+        "env": settings.ENV,
+        "debug": settings.DEBUG,
+        "message": "Hello from Lexit!",
+    }
