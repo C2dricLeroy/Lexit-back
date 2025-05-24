@@ -1,6 +1,8 @@
-from sqlmodel import SQLModel, Field, Relationship
-from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
+from typing import TYPE_CHECKING, List, Optional
+
+from sqlmodel import Field, Relationship, SQLModel
+
 from .countryLanguage import CountryLanguageLink
 
 if TYPE_CHECKING:
@@ -8,6 +10,8 @@ if TYPE_CHECKING:
 
 
 class Country(SQLModel, table=True):
+    """Define a Country Model."""
+
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(max_length=100)
     code: str = Field(max_length=100, unique=True)
@@ -17,6 +21,5 @@ class Country(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.now)
 
     languages: List["Language"] = Relationship(
-        back_populates="countries",
-        link_model=CountryLanguageLink
-        )
+        back_populates="countries", link_model=CountryLanguageLink
+    )

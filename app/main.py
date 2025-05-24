@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from app import models  # noqa: F401
 from app.config import settings
 from app.database import init_db
-from app.routes import language
+from app.routes import country, language
 
 
 def get_app() -> FastAPI:
@@ -20,25 +20,34 @@ def get_app() -> FastAPI:
 
 
 basicConfig(level=INFO)
-logger = getLogger(__name__)
+_logger = getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize the database at startup."""
-    logger.info("Starting up...")
+    _logger.info("Starting up...")
     init_db()
+
+    data = country.load_csv_at_startup()
+    _logger.info("CSV loaded with %s rows", len(data))
     yield
-    logger.info("Shutting down...")
-    logger.info("Finished shutting down.")
+    _logger.info("Shutting down...")
+    _logger.info("Finished shutting down.")
 
 
 app = get_app()
 
+
 app.include_router(
     language.router,
     prefix=f"/{settings.API_VERSION}/language",
-    tags=["Languages"],
+    tags=["Language"],
+)
+app.include_router(
+    country.router,
+    prefix=f"/{settings.API_VERSION}/country",
+    tags=["Country"],
 )
 
 
