@@ -3,8 +3,6 @@ from typing import TYPE_CHECKING, List, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
 
-from .dictionaryEntry import DictionaryEntryLink
-
 if TYPE_CHECKING:
     from .entry import Entry
     from .language import Language
@@ -37,6 +35,4 @@ class Dictionary(SQLModel, table=True):
         },
     )
     user: Optional["User"] = Relationship(back_populates="dictionaries")
-    entries: List["Entry"] = Relationship(
-        back_populates="dictionaries", link_model=DictionaryEntryLink
-    )
+    entries: List["Entry"] = Relationship(back_populates="dictionary")
