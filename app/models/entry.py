@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
 if TYPE_CHECKING:
     from app.models.dictionary import Dictionary
@@ -16,7 +16,11 @@ class Entry(SQLModel, table=True):
     updated_at: Optional[datetime] = Field(default_factory=datetime.now)
     description: Optional[str] = None
 
-    dictionary_id: Optional[int] = Field(
-        default=None, foreign_key="dictionary.id"
-    )
+    dictionary_id: int = Field(default=None, foreign_key="dictionary.id")
     dictionary: Optional["Dictionary"] = Relationship(back_populates="entries")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "original_name", "dictionary_id", name="uix_entry_name_dict"
+        ),
+    )

@@ -4,6 +4,12 @@ from typing import Optional
 from sqlmodel import SQLModel
 
 
+class EntryUpdate(SQLModel):
+    original_name: Optional[str] = None
+    translation: Optional[str] = None
+    description: Optional[str] = None
+
+
 class EntryCreate(SQLModel):
     """Entry Create DTO."""
 

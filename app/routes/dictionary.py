@@ -85,3 +85,11 @@ def update_dictionary(
             detail="A dictionary with these languages already exists.",
         ) from exc
     return db_dictionary
+
+
+@router.delete("/{id}")
+def delete_dictionary(
+    dictionary_id: int, session: Session = Depends(get_session)
+):
+    """Delete a dictionary by its ID."""
+    session.delete(session.get(Dictionary, dictionary_id))

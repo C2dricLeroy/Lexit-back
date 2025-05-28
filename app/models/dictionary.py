@@ -45,4 +45,7 @@ class Dictionary(SQLModel, table=True):
         },
     )
     user: Optional["User"] = Relationship(back_populates="dictionaries")
-    entries: List["Entry"] = Relationship(back_populates="dictionary")
+    entries: List["Entry"] = Relationship(
+        back_populates="dictionary",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
