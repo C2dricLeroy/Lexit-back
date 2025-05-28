@@ -6,6 +6,7 @@ from sqlmodel import Session, select
 from app.database import get_session
 from app.dto.entry import EntryCreate, EntryRead
 from app.models.entry import Entry
+from app.services.entry import compute_display_name
 
 router = APIRouter()
 _logger = getLogger(__name__)
@@ -37,6 +38,7 @@ def get_entries_by_dictionary_id(
 def create_entry(entry: EntryCreate, session: Session = Depends(get_session)):
     """Create a new entry."""
     db_entry = Entry(**entry.model_dump())
+    db_entry = compute_display_name(db_entry)
     session.add(db_entry)
     session.commit()
     session.refresh(db_entry)
