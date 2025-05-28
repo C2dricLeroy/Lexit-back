@@ -5,8 +5,9 @@ from sqlmodel import Session, select
 
 from app.core.security.password import hash_password
 from app.database import get_session
+from app.dto.dictionary import DictionaryRead
 from app.dto.user import UserCreate, UserRead
-from app.models import User
+from app.models import Dictionary, User
 
 router = APIRouter()
 _logger = getLogger(__name__)
@@ -22,6 +23,16 @@ def get_users(session: Session = Depends(get_session)):
 def get_user_by_id(user_id: int, session: Session = Depends(get_session)):
     """Return a user by its ID."""
     return session.exec(select(User).where(User.id == user_id)).first()
+
+
+@router.get("/dictionary/{user_id}", response_model=list[DictionaryRead])
+def get_user_dictionaries(
+    user_id: int, session: Session = Depends(get_session)
+):
+    """Return dictionaries belonging to a user."""
+    return session.exec(
+        select(Dictionary).where(Dictionary.user_id == user_id)
+    ).all()
 
 
 @router.post("/", response_model=UserRead, status_code=201)
