@@ -1,6 +1,8 @@
 from logging import getLogger
 
 from fastapi import APIRouter, Depends
+from fastapi.exceptions import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.database import get_session
@@ -37,9 +39,21 @@ def get_entries_by_dictionary_id(
 @router.post("/", response_model=EntryRead, status_code=201)
 def create_entry(entry: EntryCreate, session: Session = Depends(get_session)):
     """Create a new entry."""
+    db_dictionary = session.get(Entry, entry.dictionary_id)
+    if not db_dictionary:
+        raise HTTPException(status_code=404, detail="Dictionary not found")
+
     db_entry = Entry(**entry.model_dump())
     db_entry = compute_display_name(db_entry)
-    session.add(db_entry)
-    session.commit()
-    session.refresh(db_entry)
+    db_dictionary.entries.append(db_entry)
+
+    try:
+        session.commit()
+        session.refresh(db_entry)
+    except IntegrityError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="An entry with this name already exists in the dictionary.",
+        ) from exc
     return db_entry
