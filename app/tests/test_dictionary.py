@@ -4,15 +4,21 @@ import pytest
 from fastapi.exceptions import HTTPException
 from sqlalchemy.exc import IntegrityError
 
-from app.dto.dictionary import DictionaryCreate
+from app.dto.dictionary import DictionaryCreate, DictionaryUpdate
 from app.models.dictionary import Dictionary
 from app.models.user import User
-from app.routes.dictionary import create_dictionary
+from app.routes.dictionary import (
+    create_dictionary,
+    get_dictionaries,
+    get_dictionary_by_id,
+    update_dictionary,
+)
 
 
 def test_create_dictionary_success():
     """Test creating a dictionary with success."""
     mock_session = MagicMock()
+
     mock_user = User(
         id=1,
         username="testuser",
@@ -118,3 +124,112 @@ def test_create_dictionary_integrity_error():
             == "A dictionary with these languages already exists."
         )
         mock_session.rollback.assert_called_once()
+
+
+def test_get_dictionaries():
+    """Test retrieving all dictionaries successfully."""
+    mock_session = MagicMock()
+
+    mock_dictionaries = [
+        Dictionary(
+            id=1,
+            name="English to French",
+            display_name="English to French (en → fr)",
+            source_language_id=1,
+            target_language_id=2,
+            user_id=1,
+        ),
+        Dictionary(
+            id=2,
+            name="English to Spanish",
+            display_name="English to Spanish (en → es)",
+            source_language_id=1,
+            target_language_id=3,
+            user_id=1,
+        ),
+    ]
+
+    mock_query_result = MagicMock()
+    mock_query_result.all.return_value = mock_dictionaries
+    mock_session.exec.return_value = mock_query_result
+
+    result = get_dictionaries(mock_session)
+
+    assert result == mock_dictionaries
+    assert len(result) == 2
+    assert result[0].name == "English to French"
+    assert result[1].name == "English to Spanish"
+    mock_session.exec.assert_called_once()
+    mock_query_result.all.assert_called_once()
+
+
+def test_get_dictionaries_empty():
+    """Test retrieving dictionaries when none exist."""
+    mock_session = MagicMock()
+
+    mock_query_result = MagicMock()
+    mock_query_result.all.return_value = []
+    mock_session.exec.return_value = mock_query_result
+
+    result = get_dictionaries(mock_session)
+
+    assert result == []
+    assert len(result) == 0
+    mock_session.exec.assert_called_once()
+    mock_query_result.all.assert_called_once()
+
+
+def test_get_dictionary_by_id_success():
+    """Test retrieving a dictionary by ID successfully."""
+    mock_session = MagicMock()
+
+    mock_dictionary = Dictionary(
+        id=1,
+        name="English to French",
+        display_name="English to French (en → fr)",
+        source_language_id=1,
+        target_language_id=2,
+        user_id=1,
+    )
+
+    mock_query_result = MagicMock()
+    mock_query_result.first.return_value = mock_dictionary
+    mock_session.exec.return_value = mock_query_result
+
+    result = get_dictionary_by_id(1, mock_session)
+
+    assert result == mock_dictionary
+    assert result.id == 1
+    assert result.name == "English to French"
+    assert result.display_name == "English to French (en → fr)"
+    mock_session.exec.assert_called_once()
+    mock_query_result.first.assert_called_once()
+
+
+def test_update_dictionary_success():
+    """Test updating a dictionary with success."""
+    mock_session = MagicMock()
+
+    mock_dictionary = Dictionary(
+        id=1,
+        name="English to French",
+        display_name="English to French (en → fr)",
+        source_language_id=1,
+        target_language_id=2,
+        user_id=1,
+    )
+
+    mock_session.get.return_value = mock_dictionary
+
+    dictionary_update = DictionaryUpdate(name="Updated Dictionary Name")
+
+    result = update_dictionary(1, dictionary_update, mock_session)
+
+    assert result.id == 1
+    assert result.name == "Updated Dictionary Name"
+    assert result.display_name == "English to French (en → fr)"
+    assert result.source_language_id == 1
+    assert result.target_language_id == 2
+
+    mock_session.commit.assert_called_once()
+    mock_session.refresh.assert_called_once_with(mock_dictionary)
