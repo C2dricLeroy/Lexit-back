@@ -32,6 +32,7 @@ freeze:
 	@$(COMPOSE) exec $(SERVICE_NAME) pip freeze > requirements.txt
 
 test:
+	@$(COMPOSE) up -d --build
 	@$(COMPOSE) exec $(SERVICE_NAME) pytest
 
 delete:
