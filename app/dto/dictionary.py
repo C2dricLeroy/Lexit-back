@@ -18,5 +18,13 @@ class DictionaryRead(DictionaryCreate):
     """Dictionary Read DTO."""
 
     id: int
+    display_name: Optional[str]
     created_at: datetime
     updated_at: datetime
+
+
+class DictionaryUpdate(SQLModel):
+    """Dictionary Update DTO."""
+
+    name: Optional[str] = None
+    description: Optional[str] = None

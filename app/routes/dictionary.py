@@ -2,12 +2,18 @@ from logging import getLogger
 
 from fastapi import APIRouter, Depends
 from fastapi.exceptions import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.database import get_session
-from app.dto.dictionary import DictionaryCreate, DictionaryRead
+from app.dto.dictionary import (
+    DictionaryCreate,
+    DictionaryRead,
+    DictionaryUpdate,
+)
 from app.models.dictionary import Dictionary
 from app.models.user import User
+from app.services.dictionary import compute_display_name
 
 router = APIRouter()
 _logger = getLogger(__name__)
@@ -39,9 +45,43 @@ def create_dictionary(
         raise HTTPException(status_code=404, detail="User not found")
 
     db_dictionary = Dictionary(**dictionary.model_dump())
-    db_user.dictionaries.append(db_dictionary)  # Facultatif mais explicite
+    db_dictionary = compute_display_name(db_dictionary)
+    db_user.dictionaries.append(db_dictionary)
 
-    session.add(db_dictionary)
-    session.commit()
-    session.refresh(db_dictionary)
+    try:
+        session.commit()
+        session.refresh(db_dictionary)
+    except IntegrityError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="A dictionary with these languages already exists.",
+        ) from exc
+    return db_dictionary
+
+
+@router.put("/{dictionary_id}", response_model=DictionaryRead)
+def update_dictionary(
+    dictionary_id: int,
+    dictionary_update: DictionaryUpdate,
+    session: Session = Depends(get_session),
+):
+    """Update a dictionary by its ID."""
+    db_dictionary = session.get(Dictionary, dictionary_id)
+    if not db_dictionary:
+        raise HTTPException(status_code=404, detail="Dictionary not found")
+
+    update_data = dictionary_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_dictionary, key, value)
+
+    try:
+        session.commit()
+        session.refresh(db_dictionary)
+    except IntegrityError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="A dictionary with these languages already exists.",
+        ) from exc
     return db_dictionary

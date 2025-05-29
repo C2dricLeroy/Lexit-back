@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
 if TYPE_CHECKING:
     from .entry import Entry
@@ -12,8 +12,18 @@ if TYPE_CHECKING:
 class Dictionary(SQLModel, table=True):
     """Define a Dictionary Model."""
 
+    __table_args__ = (
+        UniqueConstraint(
+            "source_language_id",
+            "target_language_id",
+            name="uix_dictionary_languages",
+        ),
+    )
+
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
+    description: Optional[str] = Field(default=None, max_length=500)
+    display_name: Optional[str] = Field(default=None, nullable=True)
 
     source_language_id: int = Field(foreign_key="language.id")
     target_language_id: int = Field(foreign_key="language.id")
