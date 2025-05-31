@@ -1,17 +1,20 @@
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.exceptions import HTTPException
 from sqlalchemy.exc import IntegrityError
 
-from app.dto.entry import EntryCreate
+from app.dto.entry import EntryCreate, EntryUpdate
 from app.models.dictionary import Dictionary
 from app.models.entry import Entry
 from app.routes.entry import (
     create_entry,
+    delete_entry,
     get_entries,
     get_entries_by_dictionary_id,
     get_entry_by_id,
+    update_entry,
 )
 
 
@@ -195,3 +198,153 @@ def test_create_entry_integrity_error():
             == "An entry with this name already exists in the dictionary."
         )
         mock_session.rollback.assert_called_once()
+
+
+def test_delete_entry_success():
+    """Test that delete_entry returns a success message when successfully deleting an entry."""
+    mock_session = MagicMock()
+
+    entry_id = 1
+    mock_entry = Entry(
+        id=entry_id,
+        original_name="Test Entry",
+        translation="Entrée de test",
+        dictionary_id=1,
+    )
+
+    mock_session.get.return_value = mock_entry
+
+    response = delete_entry(entry_id=entry_id, session=mock_session)
+
+    assert response == {
+        "message": "Entry %s deleted successfully!",
+        entry_id: entry_id,
+    }
+    mock_session.get.assert_called_once_with(Entry, entry_id)
+    mock_session.delete.assert_called_once_with(mock_entry)
+    mock_session.commit.assert_called_once()
+    mock_session.rollback.assert_not_called()
+
+
+def test_delete_entry_not_found():
+    """Test that delete_entry raises a 404 HTTPException when the entry is not found."""
+    mock_session = MagicMock()
+
+    entry_id = 999
+    mock_session.get.return_value = None
+
+    with pytest.raises(HTTPException) as excinfo:
+        delete_entry(entry_id=entry_id, session=mock_session)
+
+    assert excinfo.value.status_code == 404
+    assert excinfo.value.detail == "Entry not found"
+    mock_session.get.assert_called_once_with(Entry, entry_id)
+    mock_session.delete.assert_not_called()
+    mock_session.commit.assert_not_called()
+    mock_session.rollback.assert_not_called()
+
+
+def test_update_entry_success():
+    """Test that update_entry successfully updates an entry with valid input."""
+    mock_session = MagicMock()
+
+    entry_id = 1
+    mock_entry = Entry(
+        id=entry_id,
+        original_name="Original Entry",
+        translation="Translation originale",
+        dictionary_id=1,
+    )
+
+    mock_session.get.return_value = mock_entry
+
+    entry_update = EntryUpdate(original_name="Updated Entry")
+
+    with patch(
+        "app.routes.entry.compute_display_name",
+        return_value=Entry(
+            id=entry_id,
+            original_name="Updated Entry",
+            translation="Translation originale",
+            dictionary_id=1,
+            display_name="Updated Entry (→ Translation originale)",
+        ),
+    ), patch("app.routes.entry.datetime") as mock_datetime:
+        mock_now = datetime.now()
+        mock_datetime.now.return_value = mock_now
+
+        response = update_entry(
+            entry_id=entry_id, entry_update=entry_update, session=mock_session
+        )
+
+        assert response.id == entry_id
+        assert response.original_name == "Updated Entry"
+        assert response.translation == "Translation originale"
+        assert response.dictionary_id == 1
+        assert response.updated_at == mock_now
+
+
+def test_update_entry_not_found():
+    """Test that update_entry raises a 404 HTTPException when the entry is not found."""
+    mock_session = MagicMock()
+
+    entry_id = 999
+    mock_session.get.return_value = None
+
+    entry_update = EntryUpdate(original_name="Updated Entry")
+
+    with pytest.raises(HTTPException) as excinfo:
+        update_entry(
+            entry_id=entry_id, entry_update=entry_update, session=mock_session
+        )
+
+    assert excinfo.value.status_code == 404
+    assert excinfo.value.detail == "Entry not found"
+    mock_session.get.assert_called_once_with(Entry, entry_id)
+    mock_session.add.assert_not_called()
+    mock_session.commit.assert_not_called()
+    mock_session.refresh.assert_not_called()
+
+
+def test_update_entry_integrity_error():
+    """Test that update_entry raises a 400 HTTPException when there's a duplicate entry."""
+    mock_session = MagicMock()
+
+    entry_id = 1
+    mock_entry = Entry(
+        id=entry_id,
+        original_name="Original Entry",
+        translation="Translation originale",
+        dictionary_id=1,
+    )
+
+    mock_session.get.return_value = mock_entry
+    mock_session.commit.side_effect = IntegrityError(
+        "statement", "params", "orig"
+    )
+
+    entry_update = EntryUpdate(original_name="Duplicate Entry")
+
+    with patch(
+        "app.routes.entry.compute_display_name",
+        return_value=mock_entry,
+    ), patch("app.routes.entry.datetime") as mock_datetime:
+        mock_datetime.now.return_value = datetime.now()
+
+        with pytest.raises(HTTPException) as exc_info:
+            update_entry(
+                entry_id=entry_id,
+                entry_update=entry_update,
+                session=mock_session,
+            )
+
+        assert exc_info.value.status_code == 400
+        assert (
+            exc_info.value.detail
+            == "An entry with this name already exists in this dictionary."
+        )
+        mock_session.get.assert_called_once_with(Entry, entry_id)
+        mock_session.add.assert_called_once_with(mock_entry)
+        mock_session.rollback.assert_called_once()
+        mock_session.commit.assert_called_once()
+        mock_session.refresh.assert_not_called()
