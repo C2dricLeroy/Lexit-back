@@ -47,24 +47,41 @@ def create_entry(entry: EntryCreate, session: Session = Depends(get_session)):
     db_entry = Entry(**entry.model_dump())
     db_entry = compute_display_name(db_entry)
 
+    db_dictionary.entries.append(db_entry)
+
     session.add(db_entry)
     try:
         session.commit()
         session.refresh(db_entry)
-    except IntegrityError:
+    except IntegrityError as exc:
         session.rollback()
         raise HTTPException(
             status_code=409,
             detail="An entry with this name already exists in the dictionary.",
-        )
+        ) from exc
 
     return db_entry
 
 
-@router.delete("/{id}")
+@router.delete("/{entry_id}", status_code=204)
 def delete_entry(entry_id: int, session: Session = Depends(get_session)):
-    """Delete an entry by its ID."""
-    session.delete(session.get(Entry, entry_id))
+    """Delete a entry by its ID."""
+    db_entry = session.get(Entry, entry_id)
+    if not db_entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+
+    try:
+        session.delete(db_entry)
+        session.commit()
+    except Exception as exc:
+        session.rollback()
+        _logger.error("Error deleting entry %s: %s", entry_id, exc)
+        raise HTTPException(
+            status_code=500,
+            detail="An error occurred while deleting the entry",
+        ) from exc
+
+    return {"message": "Entry %s deleted successfully!", entry_id: entry_id}
 
 
 @router.patch("/{entry_id}", response_model=EntryRead)

@@ -9,6 +9,7 @@ from app.models.dictionary import Dictionary
 from app.models.user import User
 from app.routes.dictionary import (
     create_dictionary,
+    delete_dictionary,
     get_dictionaries,
     get_dictionary_by_id,
     update_dictionary,
@@ -233,3 +234,39 @@ def test_update_dictionary_success():
 
     mock_session.commit.assert_called_once()
     mock_session.refresh.assert_called_once_with(mock_dictionary)
+
+
+def test_delete_dictionary_success():
+    """Test deleting a dictionary that exists returns 204 status code."""
+    mock_session = MagicMock()
+
+    mock_dictionary = Dictionary(
+        id=1,
+        name="English to French",
+        display_name="English to French (en → fr)",
+        source_language_id=1,
+        target_language_id=2,
+        user_id=1,
+    )
+
+    mock_session.get.return_value = mock_dictionary
+
+    result = delete_dictionary(dictionary_id=1, session=mock_session)
+
+    assert result == {"message": "Dictionary %s deleted successfully!", 1: 1}
+    mock_session.delete.assert_called_once_with(mock_dictionary)
+    mock_session.commit.assert_called_once()
+
+
+def test_delete_dictionary_not_found():
+    """Test that deleting a non-existent dictionary raises a 404 error."""
+    mock_session = MagicMock()
+    mock_session.get.return_value = None
+
+    with pytest.raises(HTTPException) as exc_info:
+        delete_dictionary(999, mock_session)
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Dictionary not found"
+    mock_session.delete.assert_not_called()
+    mock_session.commit.assert_not_called()

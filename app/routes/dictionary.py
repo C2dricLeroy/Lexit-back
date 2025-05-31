@@ -87,9 +87,26 @@ def update_dictionary(
     return db_dictionary
 
 
-@router.delete("/{id}")
+@router.delete("/{dictionary_id}", status_code=204)
 def delete_dictionary(
     dictionary_id: int, session: Session = Depends(get_session)
 ):
     """Delete a dictionary by its ID."""
-    session.delete(session.get(Dictionary, dictionary_id))
+    db_dictionary = session.get(Dictionary, dictionary_id)
+    if not db_dictionary:
+        raise HTTPException(status_code=404, detail="Dictionary not found")
+
+    try:
+        session.delete(db_dictionary)
+        session.commit()
+    except Exception as exc:
+        session.rollback()
+        _logger.error("Error deleting dictionary %s: %s", dictionary_id, exc)
+        raise HTTPException(
+            status_code=500,
+            detail="An error occurred while deleting the dictionary",
+        ) from exc
+    return {
+        "message": "Dictionary %s deleted successfully!",
+        dictionary_id: dictionary_id,
+    }
