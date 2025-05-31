@@ -20,13 +20,13 @@ def test_get_users():
             id=1,
             username="user1",
             email="user1@example.com",
-            hashed_password="hashed1",
+            hashed_password="hashed1",  # NOSONAR
         ),
         User(
             id=2,
             username="user2",
             email="user2@example.com",
-            hashed_password="hashed2",
+            hashed_password="hashed2",  # NOSONAR
         ),
     ]
 
@@ -52,7 +52,7 @@ def test_get_user_by_id():
         id=1,
         username="testuser",
         email="test@example.com",
-        hashed_password="hashed_password",
+        hashed_password="hashed_password",  # NOSONAR
     )
 
     mock_query_result = MagicMock()
@@ -137,7 +137,8 @@ def test_create_user_success():
     )
 
     with patch(
-        "app.routes.user.hash_password", return_value="hashed_password123"
+        "app.routes.user.hash_password",
+        return_value="hashed_password123",  # NOSONAR
     ):
         result = create_user(user_data, mock_session)
 
@@ -147,6 +148,6 @@ def test_create_user_success():
 
         assert result.username == "newuser"
         assert result.email == "newuser@example.com"
-        assert result.hashed_password == "hashed_password123"
+        assert result.hashed_password == "hashed_password123"  # NOSONAR
         assert result.is_active is True
         assert result.is_superuser is False
