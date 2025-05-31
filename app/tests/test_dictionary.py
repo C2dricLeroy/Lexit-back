@@ -24,7 +24,7 @@ def test_create_dictionary_success():
         id=1,
         username="testuser",
         email="test@example.com",
-        hashed_password="hashed",
+        hashed_password="hashed",  # NOSONAR
     )
     mock_user.dictionaries = []
     mock_session.get.return_value = mock_user
@@ -87,7 +87,7 @@ def test_create_dictionary_integrity_error():
         id=1,
         username="testuser",
         email="test@example.com",
-        hashed_password="hashed",
+        hashed_password="hashed",  # NOSONAR
     )
     mock_user.dictionaries = []
     mock_session.get.return_value = mock_user

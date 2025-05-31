@@ -112,7 +112,7 @@ def test_create_entry():
         id=1,
         username="testuser",
         email="test@example.com",
-        hashed_password="hashed",
+        hashed_password="hashed",  # NOSONAR
     )
     mock_dictionary.entries = []
     mock_session.get.return_value = mock_dictionary
