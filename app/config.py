@@ -1,10 +1,9 @@
-import os
-
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    ENV: str = os.getenv("ENV", "DEV")
+    ENV: str = Field(default="DEV", env="ENV")
     DEBUG: bool = ENV != "PROD"
     APP_NAME: str = "Lexit"
     DB_USER: str = "fastapi"
