@@ -17,6 +17,9 @@ def get_app() -> FastAPI:
     """Return the fastapi App instance."""
     fastapi_app = FastAPI(
         title=f"{settings.APP_NAME} ({settings.ENV})",
+        docs_url=None if settings.ENV == "PROD" else "/docs",
+        redoc_url=None if settings.ENV == "PROD" else "/redoc",
+        openapi_url=None if settings.ENV == "PROD" else "/openapi.json",
         debug=settings.DEBUG,
         lifespan=lifespan,
     )

@@ -12,16 +12,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Clear Docker context on server
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USERNAME }}
-        password: ${{ secrets.SERVER_PASSWORD }}
-        script: |
-          docker compose -f ~/api/docker-compose.yml down --remove-orphans -v
-          docker system prune -a -f
-
     - name: Send files to server
       uses: appleboy/scp-action@master
       with:
@@ -31,12 +21,44 @@ jobs:
         source: ./
         target: api
 
-    - name: Build and start containers
-      uses: appleboy/ssh-action@master
+    - name: Restart Docker containers (safe)
+      uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USERNAME }}
         password: ${{ secrets.SERVER_PASSWORD }}
         script: |
           cd ~/api
+          docker compose pull
+          docker compose down --remove-orphans
+          docker rm -f api-db-1
           docker compose -f docker-compose.yml up -d --build
+
+    # - name: Clear Docker context on server
+    #   uses: appleboy/ssh-action@v1.0.3
+    #   with:
+    #     host: ${{ secrets.SERVER_HOST }}
+    #     username: ${{ secrets.SERVER_USERNAME }}
+    #     password: ${{ secrets.SERVER_PASSWORD }}
+    #     script: |
+    #       docker compose -f ~/api/docker-compose.yml down --remove-orphans -v
+    #       docker system prune -a -f
+
+    # - name: Send files to server
+    #   uses: appleboy/scp-action@master
+    #   with:
+    #     host: ${{ secrets.SERVER_HOST }}
+    #     username: ${{ secrets.SERVER_USERNAME }}
+    #     password: ${{ secrets.SERVER_PASSWORD }}
+    #     source: ./
+    #     target: api
+
+    # - name: Build and start containers
+    #   uses: appleboy/ssh-action@master
+    #   with:
+    #     host: ${{ secrets.SERVER_HOST }}
+    #     username: ${{ secrets.SERVER_USERNAME }}
+    #     password: ${{ secrets.SERVER_PASSWORD }}
+    #     script: |
+    #       cd ~/api
+    #       docker compose -f docker-compose.yml up -d --build

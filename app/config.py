@@ -3,8 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    ENV: str = Field(default="DEV", env="ENV")
-    DEBUG: bool = ENV != "PROD"
+    ENV: str = Field(default="PROD", env="ENVIRONMENT")
     APP_NAME: str = "Lexit"
     DB_USER: str = "fastapi"
     DB_PASSWORD: str = "fastapi"
@@ -12,6 +11,11 @@ class Settings(BaseSettings):
     DB_PORT: int = 5432
     DB_NAME: str = "fastapi"
     API_VERSION: str = "api/v1"
+
+    @property
+    def DEBUG(self) -> bool:
+        """Returns True if DEBUG mode is enabled."""
+        return self.ENV != "PROD"
 
     @property
     def database_url(self) -> str:

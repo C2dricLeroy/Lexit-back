@@ -1,4 +1,8 @@
 services:
   web:
     environment:
-      - ENV=DEV
+      - ENVIRONMENT=development
+    volumes:
+      - ./app:/code/app
+    ports:
+      - "8000:80"
