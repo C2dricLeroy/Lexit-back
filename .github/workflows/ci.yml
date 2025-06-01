@@ -45,4 +45,15 @@ jobs:
 
       - name: Run Tests
         run: |
-          pytest
+          coverage run -m pytest
+          coverage xml
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        with:
+          args: >
+            -Dsonar.projectKey=C2dricLeroy_Lexit-back
+            -Dsonar.organization=c2dricleroy
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
