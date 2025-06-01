@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from logging import INFO, basicConfig, getLogger
 
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app import models  # noqa: F401
 from app.config import settings
@@ -20,6 +21,7 @@ def get_app() -> FastAPI:
         debug=settings.DEBUG,
         lifespan=lifespan,
     )
+
     return fastapi_app
 
 
@@ -56,6 +58,7 @@ def include_all_routers(app: FastAPI):
 
 
 app = get_app()
+Instrumentator().instrument(app).expose(app)
 include_all_routers(app)
 
 

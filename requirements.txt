@@ -6,3 +6,4 @@ psycopg[binary]
 passlib[bcrypt]
 pytest
 coverage
+prometheus_fastapi_instrumentator
