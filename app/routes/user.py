@@ -1,13 +1,20 @@
+from datetime import timedelta
 from logging import getLogger
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
-from app.core.security.password import check_password, hash_password
+from app.config import settings
+from app.core.security.password import (
+    check_password,
+    create_access_token,
+    hash_password,
+)
 from app.database import get_session
 from app.dto.dictionary import DictionaryRead
 from app.dto.user import LoginRequest, UserCreate, UserRead
 from app.models import Dictionary, User
+from app.services.user import get_current_user
 
 router = APIRouter()
 _logger = getLogger(__name__)
@@ -51,7 +58,7 @@ def create_user(user: UserCreate, session: Session = Depends(get_session)):
     return db_user
 
 
-@router.post("/login", response_model=UserRead, summary="Login a user")
+@router.post("/login", summary="Login a user")
 def login(
     login_request: LoginRequest, session: Session = Depends(get_session)
 ):
@@ -68,4 +75,14 @@ def login(
             detail="Invalid email or password",
         )
 
-    return user
+    access_token = create_access_token(
+        data={"sub": str(user.id)},
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.get("/me", response_model=UserRead)
+def read_me(current_user: User = Depends(get_current_user)):
+    """Return the current authenticated user."""
+    return current_user

@@ -4,5 +4,6 @@ pydantic-settings==2.9.1
 sqlmodel==0.0.24
 psycopg[binary]
 passlib[bcrypt]
-pytest
-coverage
+pytest==8.4.0
+coverage==7.8.2
+pyjwt==2.10.1
