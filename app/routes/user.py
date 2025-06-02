@@ -1,12 +1,12 @@
 from logging import getLogger
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
-from app.core.security.password import hash_password
+from app.core.security.password import check_password, hash_password
 from app.database import get_session
 from app.dto.dictionary import DictionaryRead
-from app.dto.user import UserCreate, UserRead
+from app.dto.user import LoginRequest, UserCreate, UserRead
 from app.models import Dictionary, User
 
 router = APIRouter()
@@ -35,7 +35,7 @@ def get_user_dictionaries(
     ).all()
 
 
-@router.post("/", response_model=UserRead, status_code=201)
+@router.post("/signup", response_model=UserRead, status_code=201)
 def create_user(user: UserCreate, session: Session = Depends(get_session)):
     """Create a new user."""
     db_user = db_user = User(
@@ -49,3 +49,23 @@ def create_user(user: UserCreate, session: Session = Depends(get_session)):
     session.commit()
     session.refresh(db_user)
     return db_user
+
+
+@router.post("/login", response_model=UserRead, summary="Login a user")
+def login(
+    login_request: LoginRequest, session: Session = Depends(get_session)
+):
+    """Authenticate a user by email and password."""
+    user = session.exec(
+        select(User).where(User.email == login_request.email)
+    ).first()
+
+    if not user or not check_password(
+        login_request.password, user.hashed_password
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+
+    return user
