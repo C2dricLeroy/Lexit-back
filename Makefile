@@ -33,8 +33,8 @@ freeze:
 
 test:
 	@$(COMPOSE) up -d --build
-	@$(COMPOSE) exec $(SERVICE_NAME) pytest
-
+	@$(COMPOSE) exec $(SERVICE_NAME) coverage run -m pytest
+	@$(COMPOSE) exec $(SERVICE_NAME) coverage html
 delete:
 	@$(COMPOSE) down -v
 
