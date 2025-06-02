@@ -24,3 +24,10 @@ class UserRead(SQLModel):
     is_superuser: Optional[bool] = False
     created_at: datetime
     updated_at: datetime
+
+
+class LoginRequest(SQLModel):
+    """Login Request DTO."""
+
+    email: str
+    password: str
