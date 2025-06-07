@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from fastapi.exceptions import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
+from starlette.requests import Request
 
 from app.database import get_session
 from app.dto.dictionary import (
@@ -11,6 +12,7 @@ from app.dto.dictionary import (
     DictionaryRead,
     DictionaryUpdate,
 )
+from app.main import limiter
 from app.models.dictionary import Dictionary
 from app.models.user import User
 from app.services.dictionary import compute_display_name
@@ -20,14 +22,20 @@ _logger = getLogger(__name__)
 
 
 @router.get("/", response_model=list[DictionaryRead])
-def get_dictionaries(session: Session = Depends(get_session)):
+@limiter.limit("10/minute")
+def get_dictionaries(
+    request: Request, session: Session = Depends(get_session)
+):
     """Return all dictionaries."""
     return session.exec(select(Dictionary)).all()
 
 
 @router.get("/{id}", response_model=list[DictionaryRead])
+@limiter.limit("1000/day")
 def get_dictionary_by_id(
-    dictionary_id: int, session: Session = Depends(get_session)
+    request: Request,
+    dictionary_id: int,
+    session: Session = Depends(get_session),
 ):
     """Return a dictionary by its ID."""
     return session.exec(
@@ -36,8 +44,11 @@ def get_dictionary_by_id(
 
 
 @router.post("/", response_model=DictionaryRead, status_code=201)
+@limiter.limit("10/minute")
 def create_dictionary(
-    dictionary: DictionaryCreate, session: Session = Depends(get_session)
+    request: Request,
+    dictionary: DictionaryCreate,
+    session: Session = Depends(get_session),
 ):
     """Create a new dictionary."""
     db_user = session.get(User, dictionary.user_id)
@@ -61,7 +72,9 @@ def create_dictionary(
 
 
 @router.put("/{dictionary_id}", response_model=DictionaryRead)
+@limiter.limit("5/minute")
 def update_dictionary(
+    request: Request,
     dictionary_id: int,
     dictionary_update: DictionaryUpdate,
     session: Session = Depends(get_session),
@@ -88,8 +101,11 @@ def update_dictionary(
 
 
 @router.delete("/{dictionary_id}", status_code=204)
+@limiter.limit("10/minute")
 def delete_dictionary(
-    dictionary_id: int, session: Session = Depends(get_session)
+    request: Request,
+    dictionary_id: int,
+    session: Session = Depends(get_session),
 ):
     """Delete a dictionary by its ID."""
     db_dictionary = session.get(Dictionary, dictionary_id)

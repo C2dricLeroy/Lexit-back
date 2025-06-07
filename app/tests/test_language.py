@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
 
+from starlette.requests import Request
+
 from app.dto.language import LanguageCreate
 from app.models.language import Language
 from app.routes.language import (
@@ -7,6 +9,16 @@ from app.routes.language import (
     get_language_by_id,
     get_languages,
 )
+
+fake_scope = {
+    "type": "http",
+    "path": "/",
+    "headers": [],
+    "client": ("127.0.0.1", 12345),
+    "method": "GET",
+}
+
+request = Request(scope=fake_scope)
 
 
 def test_get_languages_empty():
@@ -17,7 +29,7 @@ def test_get_languages_empty():
     mock_query_result.all.return_value = []
     mock_session.exec.return_value = mock_query_result
 
-    result = get_languages(mock_session)
+    result = get_languages(request, mock_session)
 
     assert result == []
     assert len(result) == 0
@@ -39,7 +51,7 @@ def test_get_languages_with_multiple_languages():
     mock_query_result.all.return_value = mock_languages
     mock_session.exec.return_value = mock_query_result
 
-    result = get_languages(mock_session)
+    result = get_languages(request, mock_session)
 
     assert result == mock_languages
     assert len(result) == 3
@@ -60,7 +72,7 @@ def test_get_language_by_id_success():
     mock_query_result.first.return_value = mock_language
     mock_session.exec.return_value = mock_query_result
 
-    result = get_language_by_id(language_id=1, session=mock_session)
+    result = get_language_by_id(request, language_id=1, session=mock_session)
 
     assert result == mock_language
     assert result.id == 1
@@ -84,7 +96,7 @@ def test_create_language_success():
     mock_session.refresh.side_effect = lambda x: setattr(x, "id", 4)
 
     with patch("app.routes.language.Language", return_value=db_language):
-        result = create_language(language_data, mock_session)
+        result = create_language(request, language_data, mock_session)
 
     assert isinstance(result, list)
     assert len(result) == 1

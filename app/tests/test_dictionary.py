@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.exceptions import HTTPException
 from sqlalchemy.exc import IntegrityError
+from starlette.requests import Request
 
 from app.dto.dictionary import DictionaryCreate, DictionaryUpdate
 from app.models.dictionary import Dictionary
@@ -14,6 +15,16 @@ from app.routes.dictionary import (
     get_dictionary_by_id,
     update_dictionary,
 )
+
+fake_scope = {
+    "type": "http",
+    "path": "/",
+    "headers": [],
+    "client": ("127.0.0.1", 12345),
+    "method": "GET",
+}
+
+request = Request(scope=fake_scope)
 
 
 def test_create_dictionary_success():
@@ -49,7 +60,7 @@ def test_create_dictionary_success():
             display_name="Test Dictionary (en → fr)",
         ),
     ):
-        result = create_dictionary(dictionary_data, mock_session)
+        result = create_dictionary(request, dictionary_data, mock_session)
 
         assert result.name == "Test Dictionary"
         assert result.source_language == mock_source_language
@@ -73,7 +84,7 @@ def test_create_dictionary_user_not_found():
     )
 
     with pytest.raises(HTTPException) as exc_info:
-        create_dictionary(dictionary_data, mock_session)
+        create_dictionary(request, dictionary_data, mock_session)
 
     assert exc_info.value.status_code == 404
     assert exc_info.value.detail == "User not found"
@@ -117,7 +128,7 @@ def test_create_dictionary_integrity_error():
         ),
     ):
         with pytest.raises(HTTPException) as exc_info:
-            create_dictionary(dictionary_data, mock_session)
+            create_dictionary(request, dictionary_data, mock_session)
 
         assert exc_info.value.status_code == 409
         assert (
@@ -154,7 +165,7 @@ def test_get_dictionaries():
     mock_query_result.all.return_value = mock_dictionaries
     mock_session.exec.return_value = mock_query_result
 
-    result = get_dictionaries(mock_session)
+    result = get_dictionaries(request, mock_session)
 
     assert result == mock_dictionaries
     assert len(result) == 2
@@ -172,7 +183,7 @@ def test_get_dictionaries_empty():
     mock_query_result.all.return_value = []
     mock_session.exec.return_value = mock_query_result
 
-    result = get_dictionaries(mock_session)
+    result = get_dictionaries(request, mock_session)
 
     assert result == []
     assert len(result) == 0
@@ -197,7 +208,7 @@ def test_get_dictionary_by_id_success():
     mock_query_result.first.return_value = mock_dictionary
     mock_session.exec.return_value = mock_query_result
 
-    result = get_dictionary_by_id(1, mock_session)
+    result = get_dictionary_by_id(request, 1, mock_session)
 
     assert result == mock_dictionary
     assert result.id == 1
@@ -224,7 +235,7 @@ def test_update_dictionary_success():
 
     dictionary_update = DictionaryUpdate(name="Updated Dictionary Name")
 
-    result = update_dictionary(1, dictionary_update, mock_session)
+    result = update_dictionary(request, 1, dictionary_update, mock_session)
 
     assert result.id == 1
     assert result.name == "Updated Dictionary Name"
@@ -251,7 +262,7 @@ def test_delete_dictionary_success():
 
     mock_session.get.return_value = mock_dictionary
 
-    result = delete_dictionary(dictionary_id=1, session=mock_session)
+    result = delete_dictionary(request, dictionary_id=1, session=mock_session)
 
     assert result == {"message": "Dictionary %s deleted successfully!", 1: 1}
     mock_session.delete.assert_called_once_with(mock_dictionary)
@@ -264,7 +275,7 @@ def test_delete_dictionary_not_found():
     mock_session.get.return_value = None
 
     with pytest.raises(HTTPException) as exc_info:
-        delete_dictionary(999, mock_session)
+        delete_dictionary(request, 999, mock_session)
 
     assert exc_info.value.status_code == 404
     assert exc_info.value.detail == "Dictionary not found"

@@ -5,9 +5,11 @@ from fastapi import APIRouter, Depends
 from fastapi.exceptions import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
+from starlette.requests import Request
 
 from app.database import get_session
 from app.dto.entry import EntryCreate, EntryRead, EntryUpdate
+from app.main import limiter
 from app.models.entry import Entry
 from app.services.entry import compute_display_name
 
@@ -16,20 +18,27 @@ _logger = getLogger(__name__)
 
 
 @router.get("/", response_model=list[EntryRead])
-def get_entries(session: Session = Depends(get_session)):
+@limiter.limit("1000/day")
+def get_entries(request: Request, session: Session = Depends(get_session)):
     """Return all entries."""
     return session.exec(select(Entry)).all()
 
 
 @router.get("/{id}", response_model=EntryRead)
-def get_entry_by_id(entry_id: int, session: Session = Depends(get_session)):
+@limiter.limit("1000/day")
+def get_entry_by_id(
+    request: Request, entry_id: int, session: Session = Depends(get_session)
+):
     """Return an entry by its ID."""
     return session.exec(select(Entry).where(Entry.id == entry_id)).first()
 
 
 @router.get("/dictionary/{dictionary_id}", response_model=list[EntryRead])
+@limiter.limit("5000/day")
 def get_entries_by_dictionary_id(
-    dictionary_id: int, session: Session = Depends(get_session)
+    request: Request,
+    dictionary_id: int,
+    session: Session = Depends(get_session),
 ):
     """Return all entries for a given dictionary."""
     return session.exec(
@@ -38,7 +47,12 @@ def get_entries_by_dictionary_id(
 
 
 @router.post("/", response_model=EntryRead, status_code=201)
-def create_entry(entry: EntryCreate, session: Session = Depends(get_session)):
+@limiter.limit("100/minute")
+def create_entry(
+    request: Request,
+    entry: EntryCreate,
+    session: Session = Depends(get_session),
+):
     """Create a new entry."""
     db_dictionary = session.get(Entry, entry.dictionary_id)
     if not db_dictionary:
@@ -64,7 +78,10 @@ def create_entry(entry: EntryCreate, session: Session = Depends(get_session)):
 
 
 @router.delete("/{entry_id}", status_code=204)
-def delete_entry(entry_id: int, session: Session = Depends(get_session)):
+@limiter.limit("10/minute")
+def delete_entry(
+    request: Request, entry_id: int, session: Session = Depends(get_session)
+):
     """Delete a entry by its ID."""
     db_entry = session.get(Entry, entry_id)
     if not db_entry:
@@ -85,7 +102,9 @@ def delete_entry(entry_id: int, session: Session = Depends(get_session)):
 
 
 @router.patch("/{entry_id}", response_model=EntryRead)
+@limiter.limit("10/minute")
 def update_entry(
+    request: Request,
     entry_id: int,
     entry_update: EntryUpdate,
     session: Session = Depends(get_session),
@@ -109,11 +128,11 @@ def update_entry(
         session.add(db_entry)
         session.commit()
         session.refresh(db_entry)
-    except IntegrityError:
+    except IntegrityError as exc:
         session.rollback()
         raise HTTPException(
             status_code=400,
             detail="An entry with this name already exists in this dictionary.",
-        )
+        ) from exc
 
     return db_entry
