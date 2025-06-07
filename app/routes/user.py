@@ -23,21 +23,23 @@ _logger = getLogger(__name__)
 
 
 @router.get("/", response_model=list[UserRead])
-@limiter.limit("5/5minute")
+@limiter.limit("5/minute")
 def get_users(request: Request, session: Session = Depends(get_session)):
     """Return all users."""
     return session.exec(select(User)).all()
 
 
 @router.get("/me", response_model=UserRead)
-def read_me(current_user: User = Depends(get_current_user)):
+@limiter.limit("1000/day")
+def read_me(request: Request, current_user: User = Depends(get_current_user)):
     """Return the current authenticated user."""
     return current_user
 
 
 @router.get("/dictionary/{user_id}", response_model=list[DictionaryRead])
+@limiter.limit("1000/day")
 def get_user_dictionaries(
-    user_id: int, session: Session = Depends(get_session)
+    request: Request, user_id: int, session: Session = Depends(get_session)
 ):
     """Return dictionaries belonging to a user."""
     return session.exec(
@@ -46,13 +48,19 @@ def get_user_dictionaries(
 
 
 @router.get("/{user_id}", response_model=list[UserRead])
-def get_user_by_id(user_id: int, session: Session = Depends(get_session)):
+@limiter.limit("1000/day")
+def get_user_by_id(
+    request: Request, user_id: int, session: Session = Depends(get_session)
+):
     """Return a user by its ID."""
     return session.exec(select(User).where(User.id == user_id)).first()
 
 
 @router.post("/signup", response_model=UserRead, status_code=201)
-def create_user(user: UserCreate, session: Session = Depends(get_session)):
+@limiter.limit("10/minute")
+def create_user(
+    request: Request, user: UserCreate, session: Session = Depends(get_session)
+):
     """Create a new user."""
     db_user = db_user = User(
         username=user.username,
@@ -68,8 +76,11 @@ def create_user(user: UserCreate, session: Session = Depends(get_session)):
 
 
 @router.post("/login", summary="Login a user")
+@limiter.limit("10/minute")
 def login(
-    login_request: LoginRequest, session: Session = Depends(get_session)
+    request: Request,
+    login_request: LoginRequest,
+    session: Session = Depends(get_session),
 ):
     """Authenticate a user by email and password."""
     user = session.exec(

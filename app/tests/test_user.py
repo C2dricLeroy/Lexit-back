@@ -20,6 +20,8 @@ fake_scope = {
     "method": "GET",
 }
 
+request = Request(scope=fake_scope)
+
 
 def test_get_users():
     """Test that get_users returns all users when multiple users exist."""
@@ -43,8 +45,6 @@ def test_get_users():
     mock_query_result = MagicMock()
     mock_query_result.all.return_value = mock_users
     mock_session.exec.return_value = mock_query_result
-
-    request = Request(scope=fake_scope)
 
     result = get_users(request, mock_session)
 
@@ -71,7 +71,7 @@ def test_get_user_by_id():
     mock_query_result.first.return_value = mock_user
     mock_session.exec.return_value = mock_query_result
 
-    result = get_user_by_id(user_id=1, session=mock_session)
+    result = get_user_by_id(request, user_id=1, session=mock_session)
 
     assert result == mock_user
     assert result.id == 1
@@ -89,7 +89,7 @@ def test_get_user_dictionaries_empty():
     mock_query_result.all.return_value = []
     mock_session.exec.return_value = mock_query_result
 
-    result = get_user_dictionaries(user_id=1, session=mock_session)
+    result = get_user_dictionaries(request, user_id=1, session=mock_session)
 
     assert result == []
     assert len(result) == 0
@@ -124,7 +124,7 @@ def test_get_user_dictionaries_multiple():
     mock_query_result.all.return_value = mock_dictionaries
     mock_session.exec.return_value = mock_query_result
 
-    result = get_user_dictionaries(user_id=1, session=mock_session)
+    result = get_user_dictionaries(request, user_id=1, session=mock_session)
 
     assert result == mock_dictionaries
     assert len(result) == 2
@@ -152,7 +152,7 @@ def test_create_user_success():
         "app.routes.user.hash_password",
         return_value="hashed_password123",  # NOSONAR
     ):
-        result = create_user(user_data, mock_session)
+        result = create_user(request, user_data, mock_session)
 
         mock_session.add.assert_called_once()
         mock_session.commit.assert_called_once()

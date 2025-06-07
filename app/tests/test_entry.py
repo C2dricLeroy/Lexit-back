@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.exceptions import HTTPException
 from sqlalchemy.exc import IntegrityError
+from starlette.requests import Request
 
 from app.dto.entry import EntryCreate, EntryUpdate
 from app.models.dictionary import Dictionary
@@ -16,6 +17,16 @@ from app.routes.entry import (
     get_entry_by_id,
     update_entry,
 )
+
+fake_scope = {
+    "type": "http",
+    "path": "/",
+    "headers": [],
+    "client": ("127.0.0.1", 12345),
+    "method": "GET",
+}
+
+request = Request(scope=fake_scope)
 
 
 def test_get_entries():
@@ -35,7 +46,7 @@ def test_get_entries():
     mock_query_result.all.return_value = mock_entries
     mock_session.exec.return_value = mock_query_result
 
-    response = get_entries(mock_session)
+    response = get_entries(request, mock_session)
 
     assert response == mock_entries
     assert len(response) == 2
@@ -60,7 +71,7 @@ def test_get_entry_by_id():
     mock_query_result.first.return_value = mock_entry
     mock_session.exec.return_value = mock_query_result
 
-    response = get_entry_by_id(entry_id=1, session=mock_session)
+    response = get_entry_by_id(request, entry_id=1, session=mock_session)
 
     assert response == mock_entry
     assert response.id == 1
@@ -91,7 +102,7 @@ def test_get_entries_by_dictionary_id():
     mock_session.exec.return_value = mock_query_result
 
     response = get_entries_by_dictionary_id(
-        dictionary_id=1, session=mock_session
+        request, dictionary_id=1, session=mock_session
     )
 
     assert response == mock_entries
@@ -134,7 +145,7 @@ def test_create_entry():
             display_name="Test entries (en → fr)",
         ),
     ):
-        response = create_entry(entry_data, mock_session)
+        response = create_entry(request, entry_data, mock_session)
 
         assert response.original_name == "New Entry"
         assert response.translation == "Nouvelle entrée"
@@ -157,7 +168,7 @@ def test_create_entry_dictionary_not_found():
     )
 
     with pytest.raises(HTTPException) as excinfo:
-        create_entry(entry_data, mock_session)
+        create_entry(request, entry_data, mock_session)
 
     assert excinfo.value.status_code == 404
     assert excinfo.value.detail == "Dictionary not found"
@@ -190,7 +201,7 @@ def test_create_entry_integrity_error():
         ),
     ):
         with pytest.raises(HTTPException) as exc_info:
-            create_entry(entry_data, mock_session)
+            create_entry(request, entry_data, mock_session)
 
         assert exc_info.value.status_code == 409
         assert (
@@ -214,7 +225,7 @@ def test_delete_entry_success():
 
     mock_session.get.return_value = mock_entry
 
-    response = delete_entry(entry_id=entry_id, session=mock_session)
+    response = delete_entry(request, entry_id=entry_id, session=mock_session)
 
     assert response == {
         "message": "Entry %s deleted successfully!",
@@ -234,7 +245,7 @@ def test_delete_entry_not_found():
     mock_session.get.return_value = None
 
     with pytest.raises(HTTPException) as excinfo:
-        delete_entry(entry_id=entry_id, session=mock_session)
+        delete_entry(request, entry_id=entry_id, session=mock_session)
 
     assert excinfo.value.status_code == 404
     assert excinfo.value.detail == "Entry not found"
@@ -274,7 +285,10 @@ def test_update_entry_success():
         mock_datetime.now.return_value = mock_now
 
         response = update_entry(
-            entry_id=entry_id, entry_update=entry_update, session=mock_session
+            request,
+            entry_id=entry_id,
+            entry_update=entry_update,
+            session=mock_session,
         )
 
         assert response.id == entry_id
@@ -295,7 +309,10 @@ def test_update_entry_not_found():
 
     with pytest.raises(HTTPException) as excinfo:
         update_entry(
-            entry_id=entry_id, entry_update=entry_update, session=mock_session
+            request,
+            entry_id=entry_id,
+            entry_update=entry_update,
+            session=mock_session,
         )
 
     assert excinfo.value.status_code == 404
@@ -333,6 +350,7 @@ def test_update_entry_integrity_error():
 
         with pytest.raises(HTTPException) as exc_info:
             update_entry(
+                request,
                 entry_id=entry_id,
                 entry_update=entry_update,
                 session=mock_session,

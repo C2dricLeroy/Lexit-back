@@ -2,23 +2,27 @@ from typing import List
 
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
+from starlette.requests import Request
 
 from app.database import get_session
 from app.dto.language import LanguageCreate, LanguageRead
+from app.main import limiter
 from app.models.language import Language
 
 router = APIRouter()
 
 
 @router.get("/", response_model=list[LanguageRead])
-def get_languages(session: Session = Depends(get_session)):
+@limiter.limit("1000/day")
+def get_languages(request: Request, session: Session = Depends(get_session)):
     """Return all languages."""
     return session.exec(select(Language)).all()
 
 
 @router.get("/{id}", response_model=list[LanguageRead])
+@limiter.limit("1000/day")
 def get_language_by_id(
-    language_id: int, session: Session = Depends(get_session)
+    request: Request, language_id: int, session: Session = Depends(get_session)
 ):
     """Return a language by its ID."""
     return session.exec(
@@ -27,8 +31,11 @@ def get_language_by_id(
 
 
 @router.post("/", response_model=List[LanguageRead], status_code=201)
+@limiter.limit("10/minute")
 def create_language(
-    language: LanguageCreate, session: Session = Depends(get_session)
+    request: Request,
+    language: LanguageCreate,
+    session: Session = Depends(get_session),
 ):
     """Create a new language."""
     db_language = Language(**language.model_dump())
