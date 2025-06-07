@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
 
+from starlette.requests import Request
+
 from app.dto.user import UserCreate
 from app.models.dictionary import Dictionary
 from app.models.user import User
@@ -9,6 +11,14 @@ from app.routes.user import (
     get_user_dictionaries,
     get_users,
 )
+
+fake_scope = {
+    "type": "http",
+    "path": "/",
+    "headers": [],
+    "client": ("127.0.0.1", 12345),
+    "method": "GET",
+}
 
 
 def test_get_users():
@@ -34,7 +44,9 @@ def test_get_users():
     mock_query_result.all.return_value = mock_users
     mock_session.exec.return_value = mock_query_result
 
-    result = get_users(mock_session)
+    request = Request(scope=fake_scope)
+
+    result = get_users(request, mock_session)
 
     assert result == mock_users
     assert len(result) == 2
