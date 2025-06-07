@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from logging import INFO, basicConfig, getLogger
 
 from fastapi import FastAPI
+from fastapi.openapi.utils import get_openapi
 
 from app import models  # noqa: F401
 from app.config import settings
@@ -11,6 +12,33 @@ from app.database import init_db
 from app.routes import __name__ as routes_pkg
 from app.routes import __path__ as routes_path
 from app.routes import country
+
+
+def custom_openapi(app):
+    """Customize the OpenAPI schema to display an 'Authorize'."""
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title=app.title,
+        version="1.0.0",
+        description="Lexit API",
+        routes=app.routes,
+    )
+
+    # Définir le schéma de sécurité avec le nom attendu par FastAPI
+    openapi_schema["components"]["securitySchemes"] = {
+        "OAuth2PasswordBearer": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+        }
+    }
+
+    # Appliquer le schéma de sécurité globalement
+    openapi_schema["security"] = [{"OAuth2PasswordBearer": []}]
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
 
 
 def get_app() -> FastAPI:
@@ -59,6 +87,7 @@ def include_all_routers(app: FastAPI):
 
 
 app = get_app()
+app.openapi = lambda: custom_openapi(app)
 include_all_routers(app)
 
 

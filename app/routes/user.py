@@ -26,7 +26,13 @@ def get_users(session: Session = Depends(get_session)):
     return session.exec(select(User)).all()
 
 
-@router.get("/{id}", response_model=list[UserRead])
+@router.get("/me", response_model=UserRead)
+def read_me(current_user: User = Depends(get_current_user)):
+    """Return the current authenticated user."""
+    return current_user
+
+
+@router.get("/{user_id}", response_model=list[UserRead])
 def get_user_by_id(user_id: int, session: Session = Depends(get_session)):
     """Return a user by its ID."""
     return session.exec(select(User).where(User.id == user_id)).first()
@@ -80,9 +86,3 @@ def login(
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
     return {"access_token": access_token, "token_type": "bearer"}
-
-
-@router.get("/me", response_model=UserRead)
-def read_me(current_user: User = Depends(get_current_user)):
-    """Return the current authenticated user."""
-    return current_user
