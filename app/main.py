@@ -1,10 +1,16 @@
 import importlib
 import pkgutil
+import re
 from contextlib import asynccontextmanager
 from logging import INFO, basicConfig, getLogger
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from app import models  # noqa: F401
 from app.config import settings
@@ -12,6 +18,10 @@ from app.database import init_db
 from app.routes import __name__ as routes_pkg
 from app.routes import __path__ as routes_path
 from app.routes import country
+
+origins = [
+    "http://localhost:8080",
+]
 
 
 def custom_openapi(app):
@@ -86,8 +96,51 @@ def include_all_routers(app: FastAPI):
             )
 
 
+limiter = Limiter(key_func=get_remote_address)
 app = get_app()
+
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_exceeded_handler(
+    request: Request, exc: RateLimitExceeded
+):
+    """Customize the rate limit exceeded error response."""
+    limit_str = str(exc.limit.limit)
+    match = re.search(r"per (\d+) (\w+)", limit_str)
+    if match:
+        amount, unit = match.groups()
+        retry_after = int(amount) * {
+            "second": 1,
+            "seconds": 1,
+            "minute": 60,
+            "minutes": 60,
+            "hour": 3600,
+            "hours": 3600,
+        }.get(unit.lower(), 60)
+    else:
+        retry_after = 60
+
+    return JSONResponse(
+        status_code=429,
+        content={
+            "detail": "Rate limit exceeded. Please try again later.",
+            "retry_after_seconds": retry_after,
+        },
+        headers={"Retry-After": str(retry_after)},
+    )
+
+
 app.openapi = lambda: custom_openapi(app)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 include_all_routers(app)
 
 

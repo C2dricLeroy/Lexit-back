@@ -3,6 +3,7 @@ from logging import getLogger
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
+from starlette.requests import Request
 
 from app.config import settings
 from app.core.security.password import (
@@ -13,6 +14,7 @@ from app.core.security.password import (
 from app.database import get_session
 from app.dto.dictionary import DictionaryRead
 from app.dto.user import LoginRequest, UserCreate, UserRead
+from app.main import limiter
 from app.models import Dictionary, User
 from app.services.user import get_current_user
 
@@ -21,7 +23,8 @@ _logger = getLogger(__name__)
 
 
 @router.get("/", response_model=list[UserRead])
-def get_users(session: Session = Depends(get_session)):
+@limiter.limit("5/5minute")
+def get_users(request: Request, session: Session = Depends(get_session)):
     """Return all users."""
     return session.exec(select(User)).all()
 
@@ -32,12 +35,6 @@ def read_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 
-@router.get("/{user_id}", response_model=list[UserRead])
-def get_user_by_id(user_id: int, session: Session = Depends(get_session)):
-    """Return a user by its ID."""
-    return session.exec(select(User).where(User.id == user_id)).first()
-
-
 @router.get("/dictionary/{user_id}", response_model=list[DictionaryRead])
 def get_user_dictionaries(
     user_id: int, session: Session = Depends(get_session)
@@ -46,6 +43,12 @@ def get_user_dictionaries(
     return session.exec(
         select(Dictionary).where(Dictionary.user_id == user_id)
     ).all()
+
+
+@router.get("/{user_id}", response_model=list[UserRead])
+def get_user_by_id(user_id: int, session: Session = Depends(get_session)):
+    """Return a user by its ID."""
+    return session.exec(select(User).where(User.id == user_id)).first()
 
 
 @router.post("/signup", response_model=UserRead, status_code=201)
