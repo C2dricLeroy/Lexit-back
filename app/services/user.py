@@ -1,26 +1,24 @@
-from fastapi import Depends, HTTPException, Request
-from fastapi.security import HTTPBearer
+from logging import getLogger
+
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
 from sqlmodel import Session, select
 
 from app.core.security.password import decode_access_token
 from app.database import get_session
 from app.models import User
 
-bearer_scheme = HTTPBearer()
+_logger = getLogger(__name__)
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="/api/v1/user/login/",
+)
 
 
 def get_current_user(
-    request: Request, session: Session = Depends(get_session)
+    token: str = Depends(oauth2_scheme),
+    session: Session = Depends(get_session),
 ) -> User:
-    """Return the current authenticated user."""
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise HTTPException(
-            status_code=401, detail="Missing or invalid Authorization header"
-        )
-
-    token = auth_header.split(" ")[1]
-
+    """Return the current authenticated user from the JWT token."""
     try:
         payload = decode_access_token(token)
     except HTTPException as e:
