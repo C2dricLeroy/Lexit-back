@@ -85,16 +85,23 @@ def test_get_user_dictionaries_empty():
     """Test that get_user_dictionaries returns an empty list when the user has no dictionaries."""
     mock_session = MagicMock()
 
-    mock_query_result = MagicMock()
-    mock_query_result.all.return_value = []
-    mock_session.exec.return_value = mock_query_result
+    mock_user = MagicMock(spec=User)
+    mock_user.id = 1
+    mock_user.dictionaries = []
 
-    result = get_user_dictionaries(request, user_id=1, session=mock_session)
+    mock_session.get.return_value = mock_user
+
+    mock_current_user = MagicMock()
+    mock_current_user.id = 1
+
+    result = get_user_dictionaries(
+        request=MagicMock(spec=Request),
+        current_user=mock_current_user,
+        session=mock_session,
+    )
 
     assert result == []
     assert len(result) == 0
-    mock_session.exec.assert_called_once()
-    mock_query_result.all.assert_called_once()
 
 
 def test_get_user_dictionaries_multiple():
@@ -120,11 +127,20 @@ def test_get_user_dictionaries_multiple():
         ),
     ]
 
-    mock_query_result = MagicMock()
-    mock_query_result.all.return_value = mock_dictionaries
-    mock_session.exec.return_value = mock_query_result
+    mock_user = MagicMock(spec=User)
+    mock_user.id = 1
+    mock_user.dictionaries = mock_dictionaries
 
-    result = get_user_dictionaries(request, user_id=1, session=mock_session)
+    mock_session.get.return_value = mock_user
+
+    mock_current_user = MagicMock()
+    mock_current_user.id = 1
+
+    result = get_user_dictionaries(
+        request=MagicMock(spec=Request),
+        current_user=mock_current_user,
+        session=mock_session,
+    )
 
     assert result == mock_dictionaries
     assert len(result) == 2
@@ -132,8 +148,6 @@ def test_get_user_dictionaries_multiple():
     assert result[1].name == "English to Spanish"
     assert result[0].user_id == 1
     assert result[1].user_id == 1
-    mock_session.exec.assert_called_once()
-    mock_query_result.all.assert_called_once()
 
 
 def test_create_user_success():

@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 from starlette.requests import Request
 
+from app.core.limiter import limiter
 from app.database import engine, get_session
 from app.dto.country import CountryCreate, CountryRead
-from app.main import limiter
 from app.models.country import Country
 from app.models.countryLanguage import CountryLanguageLink
 from app.models.language import Language
