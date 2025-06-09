@@ -6,6 +6,7 @@ from sqlmodel import Session, select
 from starlette.requests import Request
 
 from app.config import settings
+from app.core.limiter import limiter
 from app.core.security.password import (
     check_password,
     create_access_token,
@@ -14,8 +15,7 @@ from app.core.security.password import (
 from app.database import get_session
 from app.dto.dictionary import DictionaryRead
 from app.dto.user import LoginRequest, UserCreate, UserRead
-from app.main import limiter
-from app.models import Dictionary, User
+from app.models import User
 from app.services.user import get_current_user
 
 router = APIRouter()
@@ -36,15 +36,20 @@ def read_me(request: Request, current_user: User = Depends(get_current_user)):
     return current_user
 
 
-@router.get("/dictionary/{user_id}", response_model=list[DictionaryRead])
+@router.get("/dictionary", response_model=list[DictionaryRead])
 @limiter.limit("1000/day")
 def get_user_dictionaries(
-    request: Request, user_id: int, session: Session = Depends(get_session)
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
 ):
     """Return dictionaries belonging to a user."""
-    return session.exec(
-        select(Dictionary).where(Dictionary.user_id == user_id)
-    ).all()
+    user = session.get(User, current_user.id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    return user.dictionaries
 
 
 @router.get("/{user_id}", response_model=list[UserRead])

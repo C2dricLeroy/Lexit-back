@@ -6,14 +6,13 @@ from logging import INFO, basicConfig, getLogger
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
-from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 from app import models  # noqa: F401
 from app.config import settings
+from app.core.limiter import limiter
+from app.core.openapi import custom_openapi
 from app.database import init_db
 from app.routes import __name__ as routes_pkg
 from app.routes import __path__ as routes_path
@@ -22,33 +21,6 @@ from app.routes import country
 origins = [
     "http://localhost:8080",
 ]
-
-
-def custom_openapi(app):
-    """Customize the OpenAPI schema to display an 'Authorize'."""
-    if app.openapi_schema:
-        return app.openapi_schema
-    openapi_schema = get_openapi(
-        title=app.title,
-        version="1.0.0",
-        description="Lexit API",
-        routes=app.routes,
-    )
-
-    # Définir le schéma de sécurité avec le nom attendu par FastAPI
-    openapi_schema["components"]["securitySchemes"] = {
-        "OAuth2PasswordBearer": {
-            "type": "http",
-            "scheme": "bearer",
-            "bearerFormat": "JWT",
-        }
-    }
-
-    # Appliquer le schéma de sécurité globalement
-    openapi_schema["security"] = [{"OAuth2PasswordBearer": []}]
-
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
 
 
 def get_app() -> FastAPI:
@@ -96,10 +68,21 @@ def include_all_routers(app: FastAPI):
             )
 
 
-limiter = Limiter(key_func=get_remote_address)
 app = get_app()
 
 app.state.limiter = limiter
+
+app.openapi = lambda: custom_openapi(app)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+include_all_routers(app)
 
 
 @app.exception_handler(RateLimitExceeded)
@@ -130,18 +113,6 @@ async def rate_limit_exceeded_handler(
         },
         headers={"Retry-After": str(retry_after)},
     )
-
-
-app.openapi = lambda: custom_openapi(app)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-include_all_routers(app)
 
 
 @app.get("/")

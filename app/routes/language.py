@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 from starlette.requests import Request
 
+from app.core.limiter import limiter
 from app.database import get_session
 from app.dto.language import LanguageCreate, LanguageRead
-from app.main import limiter
 from app.models.language import Language
 
 router = APIRouter()

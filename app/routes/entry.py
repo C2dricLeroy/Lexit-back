@@ -7,9 +7,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from starlette.requests import Request
 
+from app.core.limiter import limiter
 from app.database import get_session
 from app.dto.entry import EntryCreate, EntryRead, EntryUpdate
-from app.main import limiter
 from app.models.entry import Entry
 from app.services.entry import compute_display_name
 
