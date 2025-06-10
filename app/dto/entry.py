@@ -17,6 +17,7 @@ class EntryCreate(SQLModel):
     translation: str
     dictionary_id: int
     description: Optional[str] = None
+    is_expression: bool = False
 
 
 class EntryRead(EntryCreate):
@@ -24,5 +25,6 @@ class EntryRead(EntryCreate):
 
     id: int
     display_name: Optional[str]
+    is_expression: bool
     created_at: datetime
     updated_at: datetime

@@ -14,6 +14,7 @@ class Entry(SQLModel, table=True):
     translation: str
     created_at: Optional[datetime] = Field(default_factory=datetime.now)
     updated_at: Optional[datetime] = Field(default_factory=datetime.now)
+    is_expression: bool = Field(default=False)
     description: Optional[str] = None
 
     dictionary_id: int = Field(default=None, foreign_key="dictionary.id")
