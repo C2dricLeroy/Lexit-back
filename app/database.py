@@ -9,6 +9,8 @@ log = getLogger(__name__)
 
 engine = create_engine(settings.database_url)
 
+Base = SQLModel
+
 
 def init_db():
     """Initialize the database."""
