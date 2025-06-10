@@ -35,9 +35,22 @@ test:
 	@$(COMPOSE) up -d --build
 	@$(COMPOSE) exec $(SERVICE_NAME) coverage run -m pytest
 	@$(COMPOSE) exec $(SERVICE_NAME) coverage html
+
 delete:
 	@$(COMPOSE) down -v
 
 rebuild:
 	@$(COMPOSE) down -v
 	@$(COMPOSE) up --build
+
+migrate:
+	@$(COMPOSE) up -d
+	@$(COMPOSE) exec $(SERVICE_NAME) alembic upgrade head
+
+downgrade:
+	@$(COMPOSE) up -d
+	@$(COMPOSE) exec $(SERVICE_NAME) alembic downgrade $(rev)"
+
+makemigration:
+	@$(COMPOSE) up -d
+	@$(COMPOSE) exec $(SERVICE_NAME) alembic revision --autogenerate -m "$(m)"
