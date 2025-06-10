@@ -8,10 +8,8 @@ RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
 COPY ./app /code/app
 
-CMD ["/bin/sh", "-c", "\
-  if [ \"$ENVIRONMENT\" = 'production' ]; then \
-    uvicorn app.main:app --host 0.0.0.0 --port 80; \
-  else \
-    uvicorn app.main:app --host 0.0.0.0 --port 80 --reload; \
-  fi \
-"]
+COPY ./entrypoint.sh /code/entrypoint.sh
+
+RUN chmod +x /code/entrypoint.sh
+
+CMD ["/code/entrypoint.sh"]
