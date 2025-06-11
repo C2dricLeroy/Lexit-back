@@ -31,20 +31,18 @@ def test_create_dictionary_success():
     """Test creating a dictionary with success."""
     mock_session = MagicMock()
 
-    mock_user = User(
-        id=1,
-        username="testuser",
-        email="test@example.com",
-        hashed_password="hashed",  # NOSONAR
-    )
+    mock_user = MagicMock(spec=User)
+    mock_user.id = 1
     mock_user.dictionaries = []
-    mock_session.get.return_value = mock_user
+
+    mock_user_from_db = User(id=1, email="test@example.com")
+    mock_user_from_db.dictionaries = []
+    mock_session.get.return_value = mock_user_from_db
 
     dictionary_data = DictionaryCreate(
         name="Test Dictionary",
         source_language_id=1,
         target_language_id=1,
-        user_id=1,
     )
 
     mock_source_language = MagicMock(id=1)
@@ -56,23 +54,29 @@ def test_create_dictionary_success():
             name="Test Dictionary",
             source_language=mock_source_language,
             target_language=mock_target_language,
-            user_id=1,
             display_name="Test Dictionary (en → fr)",
+            user_id=1,
         ),
     ):
-        result = create_dictionary(request, dictionary_data, mock_session)
+        result = create_dictionary(
+            request, dictionary_data, mock_user, mock_session
+        )
 
         assert result.name == "Test Dictionary"
         assert result.source_language == mock_source_language
         assert result.target_language == mock_target_language
         assert result.user_id == 1
-        mock_session.commit.assert_called_once()
-        mock_session.refresh.assert_called_once()
-        assert len(mock_user.dictionaries) == 1
+        assert mock_session.commit.called
+        assert mock_session.refresh.called
+        assert len(mock_user_from_db.dictionaries) == 1
 
 
 def test_create_dictionary_user_not_found():
     """Test creating a dictionary with a non-existent user."""
+    mock_user = MagicMock(spec=User)
+    mock_user.id = 1
+    mock_user.dictionaries = []
+
     mock_session = MagicMock()
     mock_session.get.return_value = None
 
@@ -80,11 +84,10 @@ def test_create_dictionary_user_not_found():
         name="Test Dictionary",
         source_language_id=1,
         target_language_id=1,
-        user_id=999,
     )
 
     with pytest.raises(HTTPException) as exc_info:
-        create_dictionary(request, dictionary_data, mock_session)
+        create_dictionary(request, dictionary_data, mock_user, mock_session)
 
     assert exc_info.value.status_code == 404
     assert exc_info.value.detail == "User not found"
@@ -94,12 +97,7 @@ def test_create_dictionary_user_not_found():
 def test_create_dictionary_integrity_error():
     """Test creating a dictionary with a duplicate language combination."""
     mock_session = MagicMock()
-    mock_user = User(
-        id=1,
-        username="testuser",
-        email="test@example.com",
-        hashed_password="hashed",  # NOSONAR
-    )
+    mock_user = User(id=1, email="test@example.com")
     mock_user.dictionaries = []
     mock_session.get.return_value = mock_user
 
@@ -128,7 +126,9 @@ def test_create_dictionary_integrity_error():
         ),
     ):
         with pytest.raises(HTTPException) as exc_info:
-            create_dictionary(request, dictionary_data, mock_session)
+            create_dictionary(
+                request, dictionary_data, mock_user, mock_session
+            )
 
         assert exc_info.value.status_code == 409
         assert (
@@ -221,6 +221,7 @@ def test_get_dictionary_by_id_success():
 def test_update_dictionary_success():
     """Test updating a dictionary with success."""
     mock_session = MagicMock()
+    mock_user = User(id=1, email="test@example.com")
 
     mock_dictionary = Dictionary(
         id=1,
@@ -235,7 +236,9 @@ def test_update_dictionary_success():
 
     dictionary_update = DictionaryUpdate(name="Updated Dictionary Name")
 
-    result = update_dictionary(request, 1, dictionary_update, mock_session)
+    result = update_dictionary(
+        request, 1, dictionary_update, mock_user, mock_session
+    )
 
     assert result.id == 1
     assert result.name == "Updated Dictionary Name"
@@ -250,6 +253,7 @@ def test_update_dictionary_success():
 def test_delete_dictionary_success():
     """Test deleting a dictionary that exists returns 204 status code."""
     mock_session = MagicMock()
+    mock_user = User(id=1, email="test@example.com")
 
     mock_dictionary = Dictionary(
         id=1,
@@ -262,7 +266,9 @@ def test_delete_dictionary_success():
 
     mock_session.get.return_value = mock_dictionary
 
-    result = delete_dictionary(request, dictionary_id=1, session=mock_session)
+    result = delete_dictionary(
+        request, dictionary_id=1, current_user=mock_user, session=mock_session
+    )
 
     assert result == {"message": "Dictionary %s deleted successfully!", 1: 1}
     mock_session.delete.assert_called_once_with(mock_dictionary)
@@ -272,10 +278,11 @@ def test_delete_dictionary_success():
 def test_delete_dictionary_not_found():
     """Test that deleting a non-existent dictionary raises a 404 error."""
     mock_session = MagicMock()
+    mock_user = User(id=1, email="test@example.com")
     mock_session.get.return_value = None
 
     with pytest.raises(HTTPException) as exc_info:
-        delete_dictionary(request, 999, mock_session)
+        delete_dictionary(request, 999, mock_user, mock_session)
 
     assert exc_info.value.status_code == 404
     assert exc_info.value.detail == "Dictionary not found"
