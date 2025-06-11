@@ -16,6 +16,7 @@ from app.dto.dictionary import (
 from app.models.dictionary import Dictionary
 from app.models.user import User
 from app.services.dictionary import compute_display_name
+from app.services.user import get_current_user
 
 router = APIRouter()
 _logger = getLogger(__name__)
@@ -48,16 +49,17 @@ def get_dictionary_by_id(
 def create_dictionary(
     request: Request,
     dictionary: DictionaryCreate,
+    current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     """Create a new dictionary."""
-    db_user = session.get(User, dictionary.user_id)
-    if not db_user:
+    user = session.get(User, current_user.id)
+    if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     db_dictionary = Dictionary(**dictionary.model_dump())
+    db_dictionary.user = user
     db_dictionary = compute_display_name(db_dictionary)
-    db_user.dictionaries.append(db_dictionary)
 
     try:
         session.commit()
@@ -77,6 +79,7 @@ def update_dictionary(
     request: Request,
     dictionary_id: int,
     dictionary_update: DictionaryUpdate,
+    current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     """Update a dictionary by its ID."""
@@ -105,6 +108,7 @@ def update_dictionary(
 def delete_dictionary(
     request: Request,
     dictionary_id: int,
+    current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     """Delete a dictionary by its ID."""

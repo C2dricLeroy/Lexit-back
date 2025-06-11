@@ -11,7 +11,6 @@ class DictionaryCreate(SQLModel):
     description: Optional[str] = None
     source_language_id: int
     target_language_id: int
-    user_id: int
 
 
 class DictionaryRead(DictionaryCreate):
