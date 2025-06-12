@@ -11,6 +11,7 @@ from app.routes.user import (
     get_user_dictionaries,
     get_users,
 )
+from app.services.user import get_current_user
 
 fake_scope = {
     "type": "http",
@@ -177,3 +178,31 @@ def test_create_user_success():
         assert result.hashed_password == "hashed_password123"  # NOSONAR
         assert result.is_active is True
         assert result.is_superuser is False
+
+
+def test_get_current_user():
+    """Test that get_current_user returns the correct user when a valid JWT token is provided."""
+    mock_session = MagicMock()
+    mock_user = User(
+        id=1,
+        username="testuser",
+        email="test@example.com",
+        hashed_password="hashed_password",
+    )
+
+    mock_query_result = MagicMock()
+    mock_query_result.first.return_value = mock_user
+    mock_session.exec.return_value = mock_query_result
+
+    token = "fake.jwt.token"  # NOSONAR
+
+    with patch("app.services.user.decode_access_token") as mock_decode:
+        mock_decode.return_value = {"sub": "1"}
+
+        result = get_current_user(token=token, session=mock_session)
+
+        assert result == mock_user
+        assert result.id == 1
+        assert result.username == "testuser"
+        assert result.email == "test@example.com"
+        mock_session.exec.assert_called_once()
