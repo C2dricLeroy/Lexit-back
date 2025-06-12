@@ -7,6 +7,7 @@ from starlette.requests import Request
 
 from app.dto.dictionary import DictionaryCreate, DictionaryUpdate
 from app.models.dictionary import Dictionary
+from app.models.language import Language
 from app.models.user import User
 from app.routes.dictionary import (
     create_dictionary,
@@ -15,6 +16,7 @@ from app.routes.dictionary import (
     get_dictionary_by_id,
     update_dictionary,
 )
+from app.services.dictionary import compute_display_name
 
 fake_scope = {
     "type": "http",
@@ -288,3 +290,16 @@ def test_delete_dictionary_not_found():
     assert exc_info.value.detail == "Dictionary not found"
     mock_session.delete.assert_not_called()
     mock_session.commit.assert_not_called()
+
+
+def test_compute_display_name():
+    """Test computing the display name for a dictionary."""
+    mock_dictionary = Dictionary(
+        source_language=Language(id=1, name="English"),
+        target_language=Language(id=2, name="French"),
+    )
+    result = compute_display_name(
+        mock_dictionary,
+    )
+
+    assert result.display_name == "English : French"

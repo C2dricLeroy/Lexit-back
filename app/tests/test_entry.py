@@ -17,6 +17,7 @@ from app.routes.entry import (
     get_entry_by_id,
     update_entry,
 )
+from app.services.entry import compute_display_name
 
 fake_scope = {
     "type": "http",
@@ -366,3 +367,14 @@ def test_update_entry_integrity_error():
         mock_session.rollback.assert_called_once()
         mock_session.commit.assert_called_once()
         mock_session.refresh.assert_not_called()
+
+
+def test_compute_display_name():
+    """Test that compute_display_name returns the expected display name."""
+    entry = Entry(
+        original_name="Original Entry",
+        translation="Translation originale",
+        dictionary_id=1,
+    )
+    result = compute_display_name(entry)
+    assert result.display_name == "Original Entry (Translation originale)"
