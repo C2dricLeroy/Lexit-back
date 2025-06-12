@@ -12,7 +12,7 @@ from app.main import app
 
 def test_hash_password():
     """Test hashing a password."""
-    password = "test"
+    password = "test"  # NOSONAR
     hashed_password = hash_password(password)
     assert hashed_password != password
     assert bcrypt.checkpw(
@@ -22,7 +22,7 @@ def test_hash_password():
 
 def test_check_password():
     """Test checking if a password matches its hashed version."""
-    password = "test"
+    password = "test"  # NOSONAR
     hashed_password = hash_password(password)
     assert check_password(password, hashed_password)
 

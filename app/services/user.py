@@ -19,10 +19,7 @@ def get_current_user(
     session: Session = Depends(get_session),
 ) -> User:
     """Return the current authenticated user from the JWT token."""
-    try:
-        payload = decode_access_token(token)
-    except HTTPException as e:
-        raise e
+    payload = decode_access_token(token)
 
     user_id: str = payload.get("sub")
     if user_id is None:
