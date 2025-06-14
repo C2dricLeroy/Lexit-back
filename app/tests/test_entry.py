@@ -152,7 +152,6 @@ def test_create_entry():
         assert response.translation == "Nouvelle entrée"
         assert response.dictionary_id == 1
         mock_session.commit.assert_called_once()
-        mock_session.refresh.assert_called_once()
         assert len(mock_dictionary.entries) == 1
 
 

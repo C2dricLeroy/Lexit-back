@@ -1,8 +1,8 @@
 """Add is_expression to Entry.
 
-Revision ID: 605b50ed3ee2
-Revises: addbe95d4e60
-Create Date: 2025-06-10 17:38:13.021811
+Revision ID: 13fd20dfbc6e
+Revises:
+Create Date: 2025-06-14 12:50:38.574502
 
 """
 
@@ -13,8 +13,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "605b50ed3ee2"
-down_revision: Union[str, None] = "addbe95d4e60"
+revision: str = "13fd20dfbc6e"
+down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
