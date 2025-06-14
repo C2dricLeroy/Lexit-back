@@ -31,7 +31,6 @@ jobs:
           cd ~/api
           docker compose pull
           docker compose down --remove-orphans
-          docker rm -f api-db-1
           docker compose -f docker-compose.yml up -d --build
 
     # - name: Clear Docker context on server
