@@ -294,11 +294,24 @@ def test_delete_dictionary_not_found():
 
 def test_compute_display_name():
     """Test computing the display name for a dictionary."""
+    mock_session = MagicMock()
+
+    def get_side_effect(model, id_):
+        if id_ == 1:
+            return Language(id=1, name="English")
+        elif id_ == 2:
+            return Language(id=2, name="French")
+        return None
+
+    mock_session.get.side_effect = get_side_effect
+
     mock_dictionary = Dictionary(
-        source_language=Language(id=1, name="English"),
-        target_language=Language(id=2, name="French"),
+        source_language_id=1,
+        target_language_id=2,
     )
+
     result = compute_display_name(
+        mock_session,
         mock_dictionary,
     )
 

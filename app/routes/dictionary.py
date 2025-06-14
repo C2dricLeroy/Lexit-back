@@ -59,7 +59,8 @@ def create_dictionary(
 
     db_dictionary = Dictionary(**dictionary.model_dump())
     db_dictionary.user = user
-    db_dictionary = compute_display_name(db_dictionary)
+    db_dictionary = compute_display_name(session, db_dictionary)
+    session.add(db_dictionary)
 
     try:
         session.commit()
