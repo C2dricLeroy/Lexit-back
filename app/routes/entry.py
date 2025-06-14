@@ -10,6 +10,7 @@ from starlette.requests import Request
 from app.core.limiter import limiter
 from app.database import get_session
 from app.dto.entry import EntryCreate, EntryRead, EntryUpdate
+from app.models.dictionary import Dictionary
 from app.models.entry import Entry
 from app.services.entry import compute_display_name
 
@@ -54,7 +55,7 @@ def create_entry(
     session: Session = Depends(get_session),
 ):
     """Create a new entry."""
-    db_dictionary = session.get(Entry, entry.dictionary_id)
+    db_dictionary = session.get(Dictionary, entry.dictionary_id)
     if not db_dictionary:
         raise HTTPException(status_code=404, detail="Dictionary not found")
 
@@ -66,7 +67,6 @@ def create_entry(
     session.add(db_entry)
     try:
         session.commit()
-        session.refresh(db_entry)
     except IntegrityError as exc:
         session.rollback()
         raise HTTPException(
