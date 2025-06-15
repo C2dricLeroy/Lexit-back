@@ -1,5 +1,5 @@
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 from fastapi.exceptions import HTTPException
@@ -9,9 +9,10 @@ from starlette.requests import Request
 from app.dto.entry import EntryCreate, EntryUpdate
 from app.models.dictionary import Dictionary
 from app.models.entry import Entry
+from app.models.user import User
 from app.routes.entry import (
     create_entry,
-    delete_entry,
+    delete_own_entry,
     get_entries,
     get_entries_by_dictionary_id,
     get_entry_by_id,
@@ -214,6 +215,7 @@ def test_create_entry_integrity_error():
 def test_delete_entry_success():
     """Test that delete_entry returns a success message when successfully deleting an entry."""
     mock_session = MagicMock()
+    mock_user = User(id=1, email="test@example.com")
 
     entry_id = 1
     mock_entry = Entry(
@@ -223,15 +225,33 @@ def test_delete_entry_success():
         dictionary_id=1,
     )
 
-    mock_session.get.return_value = mock_entry
+    # mock_session.get.return_value = mock_entry
 
-    response = delete_entry(request, entry_id=entry_id, session=mock_session)
+    mock_dictionary = Dictionary(
+        id=1,
+        user_id=1,
+        source_lang="en",
+        target_lang="fr",
+        name="Test Dictionary",
+    )
+
+    mock_session.get.side_effect = [mock_entry, mock_dictionary]
+
+    response = delete_own_entry(
+        request, entry_id, mock_user, session=mock_session
+    )
 
     assert response == {
         "message": "Entry %s deleted successfully!",
         entry_id: entry_id,
     }
-    mock_session.get.assert_called_once_with(Entry, entry_id)
+
+    mock_session.get.assert_has_calls(
+        [
+            call(Entry, entry_id),
+            call(Dictionary, mock_entry.dictionary_id),
+        ]
+    )
     mock_session.delete.assert_called_once_with(mock_entry)
     mock_session.commit.assert_called_once()
     mock_session.rollback.assert_not_called()
@@ -240,12 +260,13 @@ def test_delete_entry_success():
 def test_delete_entry_not_found():
     """Test that delete_entry raises a 404 HTTPException when the entry is not found."""
     mock_session = MagicMock()
+    mock_user = User(id=1, email="test@example.com")
 
     entry_id = 999
     mock_session.get.return_value = None
 
     with pytest.raises(HTTPException) as excinfo:
-        delete_entry(request, entry_id=entry_id, session=mock_session)
+        delete_own_entry(request, entry_id, mock_user, session=mock_session)
 
     assert excinfo.value.status_code == 404
     assert excinfo.value.detail == "Entry not found"

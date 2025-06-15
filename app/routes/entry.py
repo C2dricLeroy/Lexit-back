@@ -12,7 +12,9 @@ from app.database import get_session
 from app.dto.entry import EntryCreate, EntryRead, EntryUpdate
 from app.models.dictionary import Dictionary
 from app.models.entry import Entry
+from app.models.user import User
 from app.services.entry import compute_display_name
+from app.services.user import get_current_user
 
 router = APIRouter()
 _logger = getLogger(__name__)
@@ -79,13 +81,57 @@ def create_entry(
 
 @router.delete("/{entry_id}", status_code=204)
 @limiter.limit("10/minute")
-def delete_entry(
-    request: Request, entry_id: int, session: Session = Depends(get_session)
+def delete_own_entry(
+    request: Request,
+    entry_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
 ):
     """Delete a entry by its ID."""
     db_entry = session.get(Entry, entry_id)
     if not db_entry:
         raise HTTPException(status_code=404, detail="Entry not found")
+
+    db_dictionary = session.get(Dictionary, db_entry.dictionary_id)
+
+    if db_dictionary.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to delete this entry.",
+        )
+
+    try:
+        session.delete(db_entry)
+        session.commit()
+    except Exception as exc:
+        session.rollback()
+        _logger.error("Error deleting entry %s: %s", entry_id, exc)
+        raise HTTPException(
+            status_code=500,
+            detail="An error occurred while deleting the entry",
+        ) from exc
+
+    return {"message": "Entry %s deleted successfully!", entry_id: entry_id}
+
+
+@router.delete("/admin/{entry_id}", status_code=204)
+@limiter.limit("10/minute")
+def admin_delete_entry(
+    request: Request,
+    entry_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Delete a entry by its ID."""
+    db_entry = session.get(Entry, entry_id)
+    if not db_entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to delete this entry.",
+        )
 
     try:
         session.delete(db_entry)
