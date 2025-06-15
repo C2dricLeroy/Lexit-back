@@ -3,7 +3,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    ENV: str = Field(default="PROD", env="ENVIRONMENT")
+    ENV: str = Field(
+        default="PROD", json_schema_extra={"env_var": "ENVIRONMENT"}
+    )
     APP_NAME: str = "Lexit"
     DB_USER: str = "fastapi"
     DB_PASSWORD: str = "fastapi"
@@ -11,7 +13,9 @@ class Settings(BaseSettings):
     DB_PORT: int = 5432
     DB_NAME: str = "fastapi"
     API_VERSION: str = "api/v1"
-    JWT_SECRET_KEY: str = Field(default="secret", env="JWT_SECRET_KEY")
+    JWT_SECRET_KEY: str = Field(
+        default="secret", json_schema_extra={"env_var": "JWT_SECRET_KEY"}
+    )
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
 
