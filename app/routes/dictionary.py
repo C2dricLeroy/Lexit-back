@@ -76,7 +76,7 @@ def create_dictionary(
 
 @router.put("/{dictionary_id}", response_model=DictionaryRead)
 @limiter.limit("5/minute")
-def update_dictionary(
+def update_own_dictionary(
     request: Request,
     dictionary_id: int,
     dictionary_update: DictionaryUpdate,
@@ -87,6 +87,48 @@ def update_dictionary(
     db_dictionary = session.get(Dictionary, dictionary_id)
     if not db_dictionary:
         raise HTTPException(status_code=404, detail="Dictionary not found")
+
+    if db_dictionary.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to update this dictionary.",
+        )
+
+    update_data = dictionary_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_dictionary, key, value)
+
+    try:
+        session.commit()
+        session.refresh(db_dictionary)
+    except IntegrityError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="A dictionary with these languages already exists.",
+        ) from exc
+    return db_dictionary
+
+
+@router.put("/admin/{dictionary_id}", response_model=DictionaryRead)
+@limiter.limit("5/minute")
+def admin_update_dictionary(
+    request: Request,
+    dictionary_id: int,
+    dictionary_update: DictionaryUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Admin update a dictionary by its ID."""
+    db_dictionary = session.get(Dictionary, dictionary_id)
+    if not db_dictionary:
+        raise HTTPException(status_code=404, detail="Dictionary not found")
+
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to update this dictionary.",
+        )
 
     update_data = dictionary_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -106,7 +148,7 @@ def update_dictionary(
 
 @router.delete("/{dictionary_id}", status_code=204)
 @limiter.limit("10/minute")
-def delete_dictionary(
+def delete_own_dictionary(
     request: Request,
     dictionary_id: int,
     current_user: User = Depends(get_current_user),
@@ -116,6 +158,47 @@ def delete_dictionary(
     db_dictionary = session.get(Dictionary, dictionary_id)
     if not db_dictionary:
         raise HTTPException(status_code=404, detail="Dictionary not found")
+
+    if db_dictionary.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to delete this dictionary.",
+        )
+
+    try:
+        session.delete(db_dictionary)
+        session.commit()
+    except Exception as exc:
+        session.rollback()
+        _logger.error("Error deleting dictionary %s: %s", dictionary_id, exc)
+        raise HTTPException(
+            status_code=500,
+            detail="An error occurred while deleting the dictionary",
+        ) from exc
+    return {
+        "message": "Dictionary %s deleted successfully!",
+        dictionary_id: dictionary_id,
+    }
+
+
+@router.delete("/admin/{dictionary_id}", status_code=204)
+@limiter.limit("10/minute")
+def admin_delete_dictionary(
+    request: Request,
+    dictionary_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Delete a dictionary by its ID."""
+    db_dictionary = session.get(Dictionary, dictionary_id)
+    if not db_dictionary:
+        raise HTTPException(status_code=404, detail="Dictionary not found")
+
+    if db_dictionary.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to delete this dictionary.",
+        )
 
     try:
         session.delete(db_dictionary)

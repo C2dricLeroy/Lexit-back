@@ -11,10 +11,10 @@ from app.models.language import Language
 from app.models.user import User
 from app.routes.dictionary import (
     create_dictionary,
-    delete_dictionary,
+    delete_own_dictionary,
     get_dictionaries,
     get_dictionary_by_id,
-    update_dictionary,
+    update_own_dictionary,
 )
 from app.services.dictionary import compute_display_name
 
@@ -238,7 +238,7 @@ def test_update_dictionary_success():
 
     dictionary_update = DictionaryUpdate(name="Updated Dictionary Name")
 
-    result = update_dictionary(
+    result = update_own_dictionary(
         request, 1, dictionary_update, mock_user, mock_session
     )
 
@@ -268,7 +268,7 @@ def test_delete_dictionary_success():
 
     mock_session.get.return_value = mock_dictionary
 
-    result = delete_dictionary(
+    result = delete_own_dictionary(
         request, dictionary_id=1, current_user=mock_user, session=mock_session
     )
 
@@ -284,7 +284,7 @@ def test_delete_dictionary_not_found():
     mock_session.get.return_value = None
 
     with pytest.raises(HTTPException) as exc_info:
-        delete_dictionary(request, 999, mock_user, mock_session)
+        delete_own_dictionary(request, 999, mock_user, mock_session)
 
     assert exc_info.value.status_code == 404
     assert exc_info.value.detail == "Dictionary not found"
