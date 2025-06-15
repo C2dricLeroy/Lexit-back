@@ -105,3 +105,30 @@ def login(
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.delete("/admin/{user_id}", response_model=UserRead)
+@limiter.limit("5/minute")
+def admin_delete_user(
+    request: Request,
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Delete a user by its ID."""
+    db_user = session.get(User, user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if db_user.id == current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot delete yourself")
+
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to delete this user.",
+        )
+
+    session.delete(db_user)
+    session.commit()
+    return {"message": "User deleted successfully"}
