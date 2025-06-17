@@ -11,6 +11,7 @@ from app.models.dictionary import Dictionary
 from app.models.entry import Entry
 from app.models.user import User
 from app.routes.entry import (
+    admin_delete_entry,
     create_entry,
     delete_own_entry,
     get_entries,
@@ -212,7 +213,7 @@ def test_create_entry_integrity_error():
         mock_session.rollback.assert_called_once()
 
 
-def test_delete_entry_success():
+def test_delete_own_entry_success():
     """Test that delete_entry returns a success message when successfully deleting an entry."""
     mock_session = MagicMock()
     mock_user = User(id=1, email="test@example.com")
@@ -257,7 +258,7 @@ def test_delete_entry_success():
     mock_session.rollback.assert_not_called()
 
 
-def test_delete_entry_not_found():
+def test_delete_own_entry_not_found():
     """Test that delete_entry raises a 404 HTTPException when the entry is not found."""
     mock_session = MagicMock()
     mock_user = User(id=1, email="test@example.com")
@@ -276,7 +277,77 @@ def test_delete_entry_not_found():
     mock_session.rollback.assert_not_called()
 
 
-def test_update_entry_success():
+def test_admin_delete_entry():
+    """Test that admin_delete_entry successfully deletes an entry."""
+    mock_session = MagicMock()
+    mock_user = User(id=1, email="test@example.com", is_superuser=True)
+
+    entry_id = 1
+    mock_entry = Entry(
+        id=entry_id,
+        original_name="Test Entry",
+        translation="Entrée de test",
+        dictionary_id=1,
+    )
+
+    mock_session.get.return_value = mock_entry
+
+    response = admin_delete_entry(
+        request, entry_id, mock_user, session=mock_session
+    )
+
+    assert response == {
+        "message": "Entry %s deleted successfully!",
+        entry_id: entry_id,
+    }
+
+    mock_session.get.assert_called_once_with(Entry, entry_id)
+
+
+def test_admin_delete_entry_not_found():
+    """Test that admin_delete_entry raises a 404 HTTPException when the entry is not found."""
+    mock_session = MagicMock()
+    mock_user = User(id=1, email="test@example.com", is_superuser=True)
+
+    entry_id = 999
+    mock_session.get.return_value = None
+
+    with pytest.raises(HTTPException) as excinfo:
+        admin_delete_entry(request, entry_id, mock_user, session=mock_session)
+
+    assert excinfo.value.status_code == 404
+    assert excinfo.value.detail == "Entry not found"
+    mock_session.get.assert_called_once_with(Entry, entry_id)
+    mock_session.delete.assert_not_called()
+    mock_session.commit.assert_not_called()
+
+
+def test_admin_delete_entry_with_non_superuser():
+    """Test that admin_delete_entry raises a 403 HTTPException when the user is not a superuser."""
+    mock_session = MagicMock()
+    mock_user = User(id=1, email="test@example.com", is_superuser=False)
+
+    entry_id = 1
+    mock_entry = Entry(
+        id=entry_id,
+        original_name="Test Entry",
+        translation="Entrée de test",
+        dictionary_id=1,
+    )
+    mock_session.get.return_value = mock_entry
+
+    with pytest.raises(HTTPException) as excinfo:
+        admin_delete_entry(request, entry_id, mock_user, session=mock_session)
+
+    assert excinfo.value.status_code == 403
+    assert (
+        excinfo.value.detail == "You are not authorized to delete this entry."
+    )
+    mock_session.delete.assert_not_called()
+    mock_session.commit.assert_not_called()
+
+
+def test_update_own_entry_success():
     """Test that update_entry successfully updates an entry with valid input."""
     mock_session = MagicMock()
 
@@ -319,7 +390,7 @@ def test_update_entry_success():
         assert response.updated_at == mock_now
 
 
-def test_update_entry_not_found():
+def test_update_own_entry_not_found():
     """Test that update_entry raises a 404 HTTPException when the entry is not found."""
     mock_session = MagicMock()
 
@@ -344,7 +415,7 @@ def test_update_entry_not_found():
     mock_session.refresh.assert_not_called()
 
 
-def test_update_entry_integrity_error():
+def test_update_entry_own_integrity_error():
     """Test that update_entry raises a 400 HTTPException when there's a duplicate entry."""
     mock_session = MagicMock()
 
