@@ -1,6 +1,7 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
+from fastapi.exceptions import HTTPException
 from sqlmodel import Session, select
 from starlette.requests import Request
 
@@ -49,7 +50,7 @@ def create_language(
 
 @router.delete("/admin/{language_id}", response_model=List[LanguageRead])
 @limiter.limit("5/minute")
-def delete_language(
+def admin_delete_language(
     request: Request,
     language_id: int,
     current_user: User = Depends(get_current_user),

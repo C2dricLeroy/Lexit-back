@@ -10,6 +10,8 @@ from app.models.dictionary import Dictionary
 from app.models.language import Language
 from app.models.user import User
 from app.routes.dictionary import (
+    admin_delete_dictionary,
+    admin_update_dictionary,
     create_dictionary,
     delete_own_dictionary,
     get_dictionaries,
@@ -220,7 +222,7 @@ def test_get_dictionary_by_id_success():
     mock_query_result.first.assert_called_once()
 
 
-def test_update_dictionary_success():
+def test_update_own_dictionary_success():
     """Test updating a dictionary with success."""
     mock_session = MagicMock()
     mock_user = User(id=1, email="test@example.com")
@@ -252,7 +254,86 @@ def test_update_dictionary_success():
     mock_session.refresh.assert_called_once_with(mock_dictionary)
 
 
-def test_delete_dictionary_success():
+def test_admin_update_dictionary_success():
+    """Test updating a dictionary as an admin with success."""
+    mock_session = MagicMock()
+    mock_user = User(id=1, email="test@example.com", is_superuser=True)
+
+    mock_dictionary = Dictionary(
+        id=1,
+        name="English to French",
+        display_name="English to French (en → fr)",
+        source_language_id=1,
+        target_language_id=2,
+        user_id=1,
+    )
+
+    mock_session.get.return_value = mock_dictionary
+
+    dictionary_update = DictionaryUpdate(name="Updated Dictionary Name")
+
+    result = admin_update_dictionary(
+        request, 1, dictionary_update, mock_user, mock_session
+    )
+
+    assert result.id == 1
+    assert result.name == "Updated Dictionary Name"
+    assert result.display_name == "English to French (en → fr)"
+
+
+def test_admin_update_dictionary_not_found():
+    """Test updating a non-existent dictionary returns 404 status code."""
+    mock_session = MagicMock()
+    mock_user = User(id=1, email="test@example.com", is_superuser=True)
+
+    mock_session.get.return_value = None
+
+    with pytest.raises(HTTPException) as exc_info:
+        admin_update_dictionary(
+            request,
+            999,
+            DictionaryUpdate(name="Updated Dictionary Name"),
+            mock_user,
+            mock_session,
+        )
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Dictionary not found"
+
+
+def test_admin_update_dictionary_with_non_superuser():
+    """Test updating a dictionary as a regular user returns 403 status code."""
+    mock_session = MagicMock()
+    mock_user = User(id=1, email="test@example.com", is_super_user=False)
+
+    mock_dictionary = Dictionary(
+        id=1,
+        name="English to French",
+        display_name="English to French (en → fr)",
+        source_language_id=1,
+        target_language_id=2,
+        user_id=2,
+    )
+
+    mock_session.get.return_value = mock_dictionary
+
+    with pytest.raises(HTTPException) as exc_info:
+        admin_update_dictionary(
+            request,
+            1,
+            DictionaryUpdate(name="Updated Dictionary Name"),
+            mock_user,
+            mock_session,
+        )
+
+    assert exc_info.value.status_code == 403
+    assert (
+        exc_info.value.detail
+        == "You are not authorized to update this dictionary."
+    )
+
+
+def test_delete_own_dictionary_success():
     """Test deleting a dictionary that exists returns 204 status code."""
     mock_session = MagicMock()
     mock_user = User(id=1, email="test@example.com")
@@ -277,7 +358,7 @@ def test_delete_dictionary_success():
     mock_session.commit.assert_called_once()
 
 
-def test_delete_dictionary_not_found():
+def test_delete_dictionary_own_not_found():
     """Test that deleting a non-existent dictionary raises a 404 error."""
     mock_session = MagicMock()
     mock_user = User(id=1, email="test@example.com")
@@ -290,6 +371,70 @@ def test_delete_dictionary_not_found():
     assert exc_info.value.detail == "Dictionary not found"
     mock_session.delete.assert_not_called()
     mock_session.commit.assert_not_called()
+
+
+def test_admin_delete_dictionary_success():
+    """Test deleting a dictionary that exists as an admin returns 204 status code."""
+    mock_session = MagicMock()
+    mock_user = User(id=1, email="test@example.com", is_superuser=True)
+
+    mock_dictionary = Dictionary(
+        id=1,
+        name="English to French",
+        display_name="English to French (en → fr)",
+        source_language_id=1,
+        target_language_id=2,
+        user_id=1,
+    )
+
+    mock_session.get.return_value = mock_dictionary
+
+    result = admin_delete_dictionary(request, 1, mock_user, mock_session)
+
+    assert result == {"message": "Dictionary %s deleted successfully!", 1: 1}
+    mock_session.delete.assert_called_once_with(mock_dictionary)
+    mock_session.commit.assert_called_once()
+
+
+def test_admin_delete_dictionary_not_found():
+    """Test that deleting a non-existent dictionary as an admin raises a 404 error."""
+    mock_session = MagicMock()
+    mock_user = User(id=1, email="test@example.com", is_superuser=True)
+    mock_session.get.return_value = None
+
+    with pytest.raises(HTTPException) as http_exception:
+        admin_delete_dictionary(request, 999, mock_user, mock_session)
+
+    assert http_exception.value.status_code == 404
+    assert http_exception.value.detail == "Dictionary not found"
+    mock_session.delete.assert_not_called()
+    mock_session.commit.assert_not_called()
+
+
+def test_admin_delete_with_non_admin():
+    """Test that deleting a dictionary as a non-admin raises a 403 error."""
+    mock_session = MagicMock()
+    mock_user = User(id=1, email="test@example.com")
+
+    mock_dictionary = Dictionary(
+        id=1,
+        name="English to French",
+        display_name="English to French (en → fr)",
+        source_language_id=1,
+        target_language_id=2,
+        user_id=1,
+    )
+
+    mock_session.get.return_value = mock_dictionary
+
+    with pytest.raises(HTTPException) as http_exception:
+        admin_delete_dictionary(request, 1, mock_user, mock_session)
+
+    assert http_exception.value.status_code == 403
+    assert (
+        http_exception.value.detail
+        == "You are not authorized to delete this dictionary."
+    )
 
 
 def test_compute_display_name():

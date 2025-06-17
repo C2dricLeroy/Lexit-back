@@ -1,10 +1,14 @@
 from unittest.mock import MagicMock, patch
 
+import pytest
+from fastapi.exceptions import HTTPException
 from starlette.requests import Request
 
 from app.dto.language import LanguageCreate
 from app.models.language import Language
+from app.models.user import User
 from app.routes.language import (
+    admin_delete_language,
     create_language,
     get_language_by_id,
     get_languages,
@@ -107,3 +111,57 @@ def test_create_language_success():
     mock_session.add.assert_called_once()
     mock_session.commit.assert_called_once()
     mock_session.refresh.assert_called_once()
+
+
+def test_admin_delete_language_success():
+    """Test deleting a language as an admin with success."""
+    mock_session = MagicMock()
+    mock_user = MagicMock()
+    mock_user.is_superuser = True
+
+    mock_language = Language(id=1, name="English", code="en")
+
+    mock_session.delete.return_value = None
+    mock_session.commit.return_value = None
+
+    result = admin_delete_language(
+        request, mock_language, mock_user, mock_session
+    )
+
+    assert result == {"message": "Language deleted successfully"}
+    assert len(result) == 1
+    mock_session.delete.assert_called_once()
+    mock_session.commit.assert_called_once()
+
+
+def test_admin_delete_language_with_non_superuser():
+    """Test deleting a language as a non-admin raises a 403 HTTPException."""
+    mock_session = MagicMock()
+    mock_user = User(id=1, email="test@example.com", is_superuser=False)
+
+    mock_language = Language(id=1, name="English", code="en")
+    mock_session.get.return_value = mock_language
+
+    with pytest.raises(HTTPException) as http_exception:
+        admin_delete_language(request, 1, mock_user, mock_session)
+
+    assert http_exception.value.status_code == 403
+    assert (
+        http_exception.value.detail
+        == "You are not authorized to delete this language."
+    )
+
+
+def test_admin_delete_language_not_found():
+    """Test deleting a non-existent language as an admin raises a 404 HTTPException."""
+    mock_session = MagicMock()
+    mock_user = User(id=1, email="test@example.com", is_superuser=True)
+    mock_session.get.return_value = None
+
+    with pytest.raises(HTTPException) as http_exception:
+        admin_delete_language(request, 999, mock_user, mock_session)
+
+    assert http_exception.value.status_code == 404
+    assert http_exception.value.detail == "Language not found"
+    mock_session.delete.assert_not_called()
+    mock_session.commit.assert_not_called()

@@ -194,7 +194,7 @@ def admin_delete_dictionary(
     if not db_dictionary:
         raise HTTPException(status_code=404, detail="Dictionary not found")
 
-    if db_dictionary.user_id != current_user.id:
+    if not current_user.is_superuser:
         raise HTTPException(
             status_code=403,
             detail="You are not authorized to delete this dictionary.",

@@ -5,3 +5,4 @@ omit =
     app/database.py
     app/main.py
     */models/*
+    app/tests/*
