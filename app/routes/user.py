@@ -1,7 +1,8 @@
 from datetime import timedelta
 from logging import getLogger
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
+from fastapi.exceptions import HTTPException
 from sqlmodel import Session, select
 from starlette.requests import Request
 
