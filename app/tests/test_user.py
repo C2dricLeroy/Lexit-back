@@ -1,11 +1,14 @@
 from unittest.mock import MagicMock, patch
 
+import pytest
+from fastapi.exceptions import HTTPException
 from starlette.requests import Request
 
 from app.dto.user import UserCreate
 from app.models.dictionary import Dictionary
 from app.models.user import User
 from app.routes.user import (
+    admin_delete_user,
     create_user,
     get_user_by_id,
     get_user_dictionaries,
@@ -206,3 +209,97 @@ def test_get_current_user():
         assert result.username == "testuser"
         assert result.email == "test@example.com"
         mock_session.exec.assert_called_once()
+
+
+def test_admin_delete_user_success():
+    """Test that admin_delete_user deletes the user successfully."""
+    mock_session = MagicMock()
+    mock_admin_user = User(
+        id=1,
+        username="adminuser",
+        email="admin@example.com",
+        hashed_password="hashed_password",
+        is_active=True,
+        is_superuser=True,
+    )
+
+    mock_user = User(
+        id=3,
+        username="testuser",
+        email="test@example.com",
+        hashed_password="hashed_password",
+    )
+
+    mock_session.get.return_value = mock_user
+
+    result = admin_delete_user(request, 3, mock_admin_user, mock_session)
+
+    assert result == {"message": "User deleted successfully"}
+    mock_session.delete.assert_called_once()
+    mock_session.commit.assert_called_once()
+
+
+def test_admin_delete_himself():
+    """Test that admin_delete_user raises an error when trying to delete themselves."""
+    mock_session = MagicMock()
+    mock_admin_user = User(
+        id=1,
+        username="adminuser",
+        email="admin@example.com",
+        hashed_password="hashed_password",
+        is_active=True,
+        is_superuser=True,
+    )
+
+    mock_session.get.return_value = mock_admin_user
+
+    with pytest.raises(HTTPException) as http_exeception:
+        admin_delete_user(request, 1, mock_admin_user, mock_session)
+
+    assert http_exeception.value.detail == "Cannot delete yourself"
+    assert http_exeception.value.status_code == 403
+
+
+def test_admin_delete_not_found():
+    """Test that deleting a non-existent dictionary as an admin raises a 404 error."""
+    mock_session = MagicMock()
+    mock_admin_user = User(
+        id=1,
+        email="admin@example.com",
+        is_superuser=True,
+    )
+
+    mock_session.get.return_value = None
+
+    with pytest.raises(HTTPException) as http_exeception:
+        admin_delete_user(request, 999, mock_admin_user, mock_session)
+
+    assert http_exeception.value.detail == "User not found"
+    assert http_exeception.value.status_code == 404
+
+
+def test_admin_delete_user_not_superuser():
+    """Test that deleting a user as a regular user raises a 403 error."""
+    mock_session = MagicMock()
+    mock_regular_user = User(
+        id=2,
+        email="regular@example.com",
+        is_superuser=False,
+    )
+
+    mock_deleted_user = User(
+        id=3,
+        email="regular@example.com",
+        is_superuser=False,
+    )
+
+    mock_session.get.return_value = mock_deleted_user
+
+    with pytest.raises(HTTPException) as http_exeception:
+        admin_delete_user(request, 3, mock_regular_user, mock_session)
+
+    assert (
+        http_exeception.value.detail
+        == "You are not authorized to delete this user."
+    )
+    assert http_exeception.value.status_code == 403
