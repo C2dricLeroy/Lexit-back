@@ -1,0 +1,7 @@
+[run]
+omit =
+    */__init__.py
+    app/core/openapi.py
+    app/database.py
+    app/main.py
+    */models/*
