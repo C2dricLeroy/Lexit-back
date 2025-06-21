@@ -6,3 +6,4 @@ omit =
     app/main.py
     */models/*
     app/tests/*
+    alembic/*
