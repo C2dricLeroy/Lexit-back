@@ -5,6 +5,7 @@ services:
       - ENVIRONMENT=production
     volumes:
       - .:/code
+      - ./logs:/var/log/lexit
     ports:
       - 8000:80
     depends_on:

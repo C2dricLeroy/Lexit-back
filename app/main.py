@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 
+import app.core.logger  # noqa: F401
 from app import models  # noqa: F401
 from app.config import settings
 from app.core.limiter import limiter
@@ -68,7 +69,7 @@ def include_all_routers(app: FastAPI):
             )
 
 
-app = get_app()
+app = get_app()  # noqa: F811
 
 app.state.limiter = limiter
 
