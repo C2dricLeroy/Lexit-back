@@ -2,6 +2,7 @@
 omit =
     */__init__.py
     app/core/openapi.py
+    app/core/logger.py
     app/database.py
     app/main.py
     */models/*
