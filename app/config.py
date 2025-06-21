@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
     VERSION: float = 0.4
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     @property
     def DEBUG(self) -> bool:
