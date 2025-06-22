@@ -123,4 +123,5 @@ def read_root():
         "env": settings.ENV,
         "debug": settings.DEBUG,
         "message": "Hello from Lexit!",
+        "version": settings.VERSION,
     }
