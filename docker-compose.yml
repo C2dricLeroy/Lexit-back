@@ -10,6 +10,13 @@ services:
       - 8000:80
     depends_on:
       - db
+    healthcheck:
+      test: pg_isready -U ${POSTGRES_USER:-fastapi} -d ${POSTGRES_DB:-${POSTGRES_USER:-postgres}}
+      
+      interval: 5s
+      timeout: 5s
+      retries: 120
+      start_period: 30s
   db:
     image: postgres:17-alpine
     volumes:
