@@ -7,6 +7,7 @@ from sqlmodel import select
 
 from app.core.security.password import (
     create_access_token,
+    create_refresh_token,
 )
 from app.database import get_session
 from app.dto.socialLogin import SocialLoginRequest
@@ -62,9 +63,6 @@ async def social_login(
     await session.commit()
 
     access_token = create_access_token({"sub": str(user.id)})
-    # refresh_token = create_refresh_token(user_id=user.id)
+    refresh_token = create_refresh_token({"sub": str(user.id)})
 
-    return {
-        "access_token": access_token,
-        # "refresh_token": refresh_token
-    }
+    return {"access_token": access_token, "refresh_token": refresh_token}

@@ -6,10 +6,7 @@ from app.models.user import User
 
 
 class UserProvider(SQLModel, table=True):
-    __tablename__ = "user_providers"
-
     id: Optional[int] = Field(default=None, primary_key=True)
-
     provider: str = Field(index=True)
     provider_user_id: str = Field(index=True)
 
