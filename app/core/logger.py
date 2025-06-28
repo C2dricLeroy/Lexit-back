@@ -3,7 +3,11 @@ import os
 from logging.handlers import RotatingFileHandler
 
 LOG_PATH = os.path.expanduser("/var/log/lexit")
-os.makedirs(LOG_PATH, exist_ok=True)
+try:
+    os.makedirs(LOG_PATH, exist_ok=True)
+except PermissionError:
+    LOG_PATH = "./logs"
+    os.makedirs(LOG_PATH, exist_ok=True)
 LOG_FILE = os.path.join(LOG_PATH, "app.log")
 
 formatter = logging.Formatter(
