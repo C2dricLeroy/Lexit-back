@@ -1,4 +1,14 @@
 services:
+  db:
+      image: postgres:17-alpine
+      volumes:
+        - postgres_data:/var/lib/postgresql/data/
+      ports:
+        - 5438:5432
+      environment:
+        - POSTGRES_USER=fastapi
+        - POSTGRES_PASSWORD=fastapi
+        - POSTGRES_DB=fastapi
   web:
     build: .
     environment:
@@ -18,16 +28,7 @@ services:
       timeout: 5s
       retries: 120
       start_period: 30s
-  db:
-    image: postgres:17-alpine
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    ports:
-      - 5438:5432
-    environment:
-      - POSTGRES_USER=fastapi
-      - POSTGRES_PASSWORD=fastapi
-      - POSTGRES_DB=fastapi
+
 
   redis:
     image: redis:8.0.1-alpine
