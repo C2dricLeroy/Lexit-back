@@ -10,10 +10,14 @@ COPY ./entrypoint.sh /code/entrypoint.sh
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
+RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+
+
 RUN chmod +x /code/entrypoint.sh
 
 COPY ./app /code/app
 
+RUN groupadd -r appuser && useradd -r -g appuser appuser
 RUN chown -R appuser:appuser /code
 
 USER appuser

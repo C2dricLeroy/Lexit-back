@@ -49,7 +49,7 @@ jobs:
           coverage xml
 
       - name: SonarQube Scan
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@v5.2.0
         with:
           args: >
             -Dsonar.projectKey=C2dricLeroy_Lexit-back
