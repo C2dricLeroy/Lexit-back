@@ -6,6 +6,7 @@ from sqlmodel import Field, Relationship, SQLModel
 if TYPE_CHECKING:
     from .dictionary import Dictionary
     from .userProvider import UserProvider
+    from .userRefreshToken import UserRefreshToken
 
 
 class User(SQLModel, table=True):
@@ -22,3 +23,4 @@ class User(SQLModel, table=True):
 
     dictionaries: List["Dictionary"] = Relationship(back_populates="user")
     providers: List["UserProvider"] = Relationship(back_populates="user")
+    refreshTokens: List["UserRefreshToken"] = Relationship(back_populates="user")
