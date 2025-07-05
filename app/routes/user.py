@@ -111,7 +111,13 @@ def login(
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
     response = JSONResponse(
-        content={"access_token": access_token, "token_type": "bearer"}
+        content={
+            "access_token": access_token,
+            "token_type": "bearer",
+            "username": user.username,
+            "email": user.email,
+            "id": user.id,
+        }
     )
     response.set_cookie(
         key="refresh_token",
