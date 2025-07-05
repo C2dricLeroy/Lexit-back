@@ -4,8 +4,12 @@ from typing import Optional
 import bcrypt
 import jwt
 from fastapi import HTTPException
+from sqlmodel import Session, select
+from sqlalchemy import desc
 
 from app.config import settings
+
+from app.models import UserRefreshToken
 
 
 def hash_password(password: str) -> str:
@@ -96,3 +100,33 @@ def decode_refresh_token(token: str) -> dict:
         raise HTTPException(
             status_code=401, detail="Invalid refresh token"
         ) from exc
+
+
+def set_refresh_token(
+    db: Session,
+    user_id: int,
+    token: str,
+    user_agent: str = None
+):
+    """Set the new refresh_token on provided User."""
+    db_token = UserRefreshToken(
+        user_id=user_id,
+        refresh_token=token,
+        user_agent=user_agent
+    )
+    db.add(db_token)
+    db.commit()
+
+
+def invalidate_refresh_token(db: Session, token: str):
+    """Invalidate last refresh token of the User."""
+    statement = (
+        select(UserRefreshToken)
+        .where(UserRefreshToken.refresh_token == token)
+        .order_by(desc(UserRefreshToken.created_at))
+    )
+    db_token = db.exec(statement).first()
+    if db_token:
+        db_token.revoked = True
+        db.add(db_token)
+        db.commit()
