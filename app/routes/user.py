@@ -3,6 +3,7 @@ from logging import getLogger
 
 from fastapi import APIRouter, Depends, status
 from fastapi.exceptions import HTTPException
+from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 from starlette.requests import Request
 
@@ -11,6 +12,8 @@ from app.core.limiter import limiter
 from app.core.security.password import (
     check_password,
     create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
     hash_password,
 )
 from app.database import get_session
@@ -105,7 +108,25 @@ def login(
         data={"sub": str(user.id)},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
+
+    response = JSONResponse(
+        content={
+            "access_token": access_token,
+            "token_type": "bearer",
+            "username": user.username,
+            "email": user.email,
+            "id": user.id,
+        }
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+    )
+    return response
 
 
 @router.delete("/admin/{user_id}", response_model=UserRead)
@@ -133,3 +154,34 @@ def admin_delete_user(
     session.delete(db_user)
     session.commit()
     return {"message": "User deleted successfully"}
+
+
+@router.post("/refresh-token/")
+def refresh_token(
+    request: Request,
+    session: Session = Depends(get_session),
+) -> JSONResponse:
+    """Refresh the access token using a valid refresh token stored in cookie."""
+    refresh_token_str = request.cookies.get("refresh_token")
+    if not refresh_token_str:
+        raise HTTPException(status_code=401, detail="Refresh token missing")
+
+    payload = decode_refresh_token(refresh_token_str)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(
+            status_code=401, detail="Invalid refresh token payload"
+        )
+
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    new_access_token = create_access_token({"sub": str(user_id)})
+
+    return JSONResponse(
+        content={
+            "access_token": new_access_token,
+            "token_type": "bearer",
+        }
+    )

@@ -55,3 +55,44 @@ def decode_access_token(token: str) -> dict:
         ) from exc
     except jwt.InvalidTokenError as exc:
         raise HTTPException(status_code=401, detail="Invalid token") from exc
+
+
+def create_refresh_token(data: dict) -> str:
+    """Create a refresh token with a longer expiration and 'refresh_token' scope."""
+    to_encode = data.copy()
+    expire = datetime.now() + timedelta(
+        days=settings.REFRESH_TOKEN_EXPIRE_DAYS
+    )
+    to_encode.update(
+        {
+            "exp": expire,
+            "scope": "refresh_token",
+        }
+    )
+    encoded_jwt = jwt.encode(
+        payload=to_encode,
+        key=settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM,
+    )
+    return encoded_jwt
+
+
+def decode_refresh_token(token: str) -> dict:
+    """Decode a refresh token and verify its scope."""
+    try:
+        payload = jwt.decode(
+            token,
+            key=settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
+        if payload.get("scope") != "refresh_token":
+            raise HTTPException(status_code=401, detail="Invalid token scope")
+        return payload
+    except jwt.ExpiredSignatureError as exc:
+        raise HTTPException(
+            status_code=401, detail="Refresh token expired"
+        ) from exc
+    except jwt.InvalidTokenError as exc:
+        raise HTTPException(
+            status_code=401, detail="Invalid refresh token"
+        ) from exc
