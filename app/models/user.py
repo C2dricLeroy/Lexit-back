@@ -23,4 +23,6 @@ class User(SQLModel, table=True):
 
     dictionaries: List["Dictionary"] = Relationship(back_populates="user")
     providers: List["UserProvider"] = Relationship(back_populates="user")
-    refreshTokens: List["UserRefreshToken"] = Relationship(back_populates="user")
+    refreshTokens: List["UserRefreshToken"] = Relationship(
+        back_populates="user"
+    )

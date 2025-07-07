@@ -15,8 +15,8 @@ from app.core.security.password import (
     create_refresh_token,
     decode_refresh_token,
     hash_password,
-    set_refresh_token,
     invalidate_refresh_token,
+    set_refresh_token,
 )
 from app.database import get_session
 from app.dto.dictionary import DictionaryRead
@@ -114,10 +114,7 @@ def login(
     user_agent = request.headers.get("user-agent", "unknown")
 
     set_refresh_token(
-        db=session,
-        user_id=user.id,
-        token=refresh_token,
-        user_agent=user_agent
+        db=session, user_id=user.id, token=refresh_token, user_agent=user_agent
     )
 
     response = JSONResponse(
@@ -198,18 +195,12 @@ def refresh_token(
 
 
 @router.post("/logout")
-def logout(
-    request: Request,
-    db: Session = Depends(get_session)
-):
+def logout(request: Request, db: Session = Depends(get_session)):
     """Proceed logout by invalidate the last refresh token."""
-    
     user_refresh_token = request.cookies.get("refresh_token")
     if not user_refresh_token:
-        print("cookie not found")
         raise HTTPException(
-            status_code=400,
-            detail="No refresh token provided"
+            status_code=400, detail="No refresh token provided"
         )
     invalidate_refresh_token(db, user_refresh_token)
     response = JSONResponse(content={"detail": "Logged out"})
