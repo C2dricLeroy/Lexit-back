@@ -4,11 +4,10 @@ from typing import Optional
 import bcrypt
 import jwt
 from fastapi import HTTPException
-from sqlmodel import Session, select
 from sqlalchemy import desc
+from sqlmodel import Session, select
 
 from app.config import settings
-
 from app.models import UserRefreshToken
 
 
@@ -103,16 +102,11 @@ def decode_refresh_token(token: str) -> dict:
 
 
 def set_refresh_token(
-    db: Session,
-    user_id: int,
-    token: str,
-    user_agent: str = None
+    db: Session, user_id: int, token: str, user_agent: str = None
 ):
     """Set the new refresh_token on provided User."""
     db_token = UserRefreshToken(
-        user_id=user_id,
-        refresh_token=token,
-        user_agent=user_agent
+        user_id=user_id, refresh_token=token, user_agent=user_agent
     )
     db.add(db_token)
     db.commit()

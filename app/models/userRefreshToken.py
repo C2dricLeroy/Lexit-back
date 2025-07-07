@@ -1,7 +1,9 @@
-from typing import Optional
-from sqlmodel import Field, Relationship, SQLModel
-from app.models.user import User
 from datetime import datetime
+from typing import Optional
+
+from sqlmodel import Field, Relationship, SQLModel
+
+from app.models.user import User
 
 
 class UserRefreshToken(SQLModel, table=True):
