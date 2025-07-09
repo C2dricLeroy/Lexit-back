@@ -14,7 +14,7 @@ Base = SQLModel
 
 def init_db():
     """Initialize the database."""
-    SQLModel.metadata.create_all(engine)
+    pass
 
 
 def get_session() -> Generator[Session, Session, None]:

@@ -54,3 +54,11 @@ downgrade:
 makemigration:
 	@$(COMPOSE) up -d
 	@$(COMPOSE) exec $(SERVICE_NAME) alembic revision --autogenerate -m "$(m)"
+
+stampalembic:
+	@$(COMPOSE) up -d
+	@$(COMPOSE) exec $(SERVICE_NAME) alembic stamp head
+
+stamp:
+	@$(COMPOSE) up -d
+	@$(COMPOSE) exec $(SERVICE_NAME) alembic stamp ${rev}

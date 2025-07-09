@@ -19,9 +19,7 @@ from app.routes import __name__ as routes_pkg
 from app.routes import __path__ as routes_path
 from app.routes import country
 
-origins = [
-    "http://localhost:8080",
-]
+origins = ["http://localhost:8080", "http://localhost:3000"]
 
 
 def get_app() -> FastAPI:
@@ -123,4 +121,5 @@ def read_root():
         "env": settings.ENV,
         "debug": settings.DEBUG,
         "message": "Hello from Lexit!",
+        "version": settings.VERSION,
     }
