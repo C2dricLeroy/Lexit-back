@@ -20,6 +20,7 @@ class DictionaryRead(DictionaryCreate):
     display_name: Optional[str]
     created_at: datetime
     updated_at: datetime
+    entry_count: int
 
 
 class DictionaryUpdate(SQLModel):
