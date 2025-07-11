@@ -96,7 +96,7 @@ def create_dictionary(
             status_code=409,
             detail="A dictionary with these languages already exists.",
         ) from exc
-    return db_dictionary
+    return DictionaryRead(**db_dictionary.model_dump(), entry_count=0)
 
 
 @router.put("/{dictionary_id}", response_model=DictionaryRead)
@@ -132,7 +132,16 @@ def update_own_dictionary(
             status_code=409,
             detail="A dictionary with these languages already exists.",
         ) from exc
-    return db_dictionary
+
+    entry_count = session.exec(
+        select(count())
+        .select_from(Entry)
+        .where(Entry.dictionary_id == dictionary_id)
+    ).one()
+
+    return DictionaryRead(
+        **db_dictionary.model_dump(), entry_count=entry_count
+    )
 
 
 @router.put("/admin/{dictionary_id}", response_model=DictionaryRead)
@@ -168,7 +177,16 @@ def admin_update_dictionary(
             status_code=409,
             detail="A dictionary with these languages already exists.",
         ) from exc
-    return db_dictionary
+
+    entry_count = session.exec(
+        select(count())
+        .select_from(Entry)
+        .where(Entry.dictionary_id == dictionary_id)
+    ).one()
+
+    return DictionaryRead(
+        **db_dictionary.model_dump(), entry_count=entry_count
+    )
 
 
 @router.delete("/{dictionary_id}", status_code=204)
