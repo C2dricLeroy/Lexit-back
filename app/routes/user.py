@@ -4,6 +4,7 @@ from logging import getLogger
 from fastapi import APIRouter, Depends, status
 from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse
+from sqlalchemy.sql.functions import count
 from sqlmodel import Session, select
 from starlette.requests import Request
 
@@ -22,6 +23,7 @@ from app.database import get_session
 from app.dto.dictionary import DictionaryRead
 from app.dto.user import LoginRequest, UserCreate, UserRead
 from app.models import User
+from app.models.entry import Entry
 from app.services.user import get_current_user
 
 router = APIRouter()
@@ -55,7 +57,18 @@ def get_user_dictionaries(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-    return user.dictionaries
+    results = []
+    for d in user.dictionaries:
+        entry_count = session.exec(
+            select(count())
+            .select_from(Entry)
+            .where(Entry.dictionary_id == d.id)
+        ).one()
+        results.append(
+            DictionaryRead(**d.model_dump(), entry_count=entry_count)
+        )
+
+    return results
 
 
 @router.get("/{user_id}", response_model=list[UserRead])

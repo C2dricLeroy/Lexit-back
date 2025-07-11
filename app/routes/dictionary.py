@@ -3,6 +3,7 @@ from logging import getLogger
 from fastapi import APIRouter, Depends
 from fastapi.exceptions import HTTPException
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.sql.functions import count
 from sqlmodel import Session, select
 from starlette.requests import Request
 
@@ -14,6 +15,7 @@ from app.dto.dictionary import (
     DictionaryUpdate,
 )
 from app.models.dictionary import Dictionary
+from app.models.entry import Entry
 from app.models.user import User
 from app.services.dictionary import compute_display_name
 from app.services.user import get_current_user
@@ -27,21 +29,44 @@ _logger = getLogger(__name__)
 def get_dictionaries(
     request: Request, session: Session = Depends(get_session)
 ):
-    """Return all dictionaries."""
-    return session.exec(select(Dictionary)).all()
+    """Return all dictionaries with entry count."""
+    dictionaries = session.exec(select(Dictionary)).all()
+
+    results = []
+    for d in dictionaries:
+        entry_count = session.exec(
+            select(count())
+            .select_from(Entry)
+            .where(Entry.dictionary_id == d.id)
+        ).one()
+        results.append(
+            DictionaryRead(**d.model_dump(), entry_count=entry_count)
+        )
+
+    return results
 
 
 @router.get("/{dictionary_id}", response_model=DictionaryRead)
-@limiter.limit("1000/day")
 def get_dictionary_by_id(
     request: Request,
     dictionary_id: int,
     session: Session = Depends(get_session),
 ):
-    """Return a dictionary by its ID."""
-    return session.exec(
-        select(Dictionary).where(Dictionary.id == int(dictionary_id))
+    """Get a dictionary by its ID with entry count."""
+    dictionary = session.exec(
+        select(Dictionary).where(Dictionary.id == dictionary_id)
     ).first()
+
+    if not dictionary:
+        raise HTTPException(status_code=404, detail="Dictionary not found")
+
+    entry_count = session.exec(
+        select(count())
+        .select_from(Entry)
+        .where(Entry.dictionary_id == dictionary_id)
+    ).one()
+
+    return DictionaryRead(**dictionary.model_dump(), entry_count=entry_count)
 
 
 @router.post("/", response_model=DictionaryRead, status_code=201)
