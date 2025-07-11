@@ -44,9 +44,10 @@ def get_entries_by_dictionary_id(
     session: Session = Depends(get_session),
 ):
     """Return all entries for a given dictionary."""
-    return session.exec(
+    result = session.exec(
         select(Entry).where(Entry.dictionary_id == dictionary_id)
     ).all()
+    return result
 
 
 @router.post("/", response_model=EntryRead, status_code=201)
