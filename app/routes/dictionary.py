@@ -31,7 +31,7 @@ def get_dictionaries(
     return session.exec(select(Dictionary)).all()
 
 
-@router.get("/{id}", response_model=list[DictionaryRead])
+@router.get("/{dictionary_id}", response_model=DictionaryRead)
 @limiter.limit("1000/day")
 def get_dictionary_by_id(
     request: Request,
@@ -40,7 +40,7 @@ def get_dictionary_by_id(
 ):
     """Return a dictionary by its ID."""
     return session.exec(
-        select(Dictionary).where(Dictionary.id == dictionary_id)
+        select(Dictionary).where(Dictionary.id == int(dictionary_id))
     ).first()
 
 
