@@ -7,7 +7,7 @@ from starlette.requests import Request
 
 from app.core.limiter import limiter
 from app.database import get_session
-from app.dto.language import LanguageCreate, LanguageRead
+from app.dto.language import LanguageRead
 from app.models.language import Language
 from app.models.user import User
 from app.services.user import get_current_user
@@ -31,21 +31,6 @@ def get_language_by_id(
     return session.exec(
         select(Language).where(Language.id == language_id)
     ).first()
-
-
-@router.post("/", response_model=List[LanguageRead], status_code=201)
-@limiter.limit("10/minute")
-def create_language(
-    request: Request,
-    language: LanguageCreate,
-    session: Session = Depends(get_session),
-):
-    """Create a new language."""
-    db_language = Language(**language.model_dump())
-    session.add(db_language)
-    session.commit()
-    session.refresh(db_language)
-    return [db_language]
 
 
 @router.delete("/admin/{language_id}", response_model=List[LanguageRead])
