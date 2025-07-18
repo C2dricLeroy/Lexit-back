@@ -4,11 +4,9 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
-from starlette.requests import Request
 
-from app.core.limiter import limiter
 from app.database import engine, get_session
-from app.dto.country import CountryCreate, CountryRead
+from app.dto.country import CountryRead
 from app.models.country import Country
 from app.models.countryLanguage import CountryLanguageLink
 from app.models.language import Language
@@ -31,21 +29,6 @@ def get_country_by_id(
     return session.exec(
         select(Country).where(Country.id == country_id)
     ).first()
-
-
-@router.post("/", response_model=CountryRead, status_code=201)
-@limiter.limit("10/minute")
-def create_country(
-    request: Request,
-    country: CountryCreate,
-    session: Session = Depends(get_session),
-):
-    """Create a new country."""
-    db_country = Country(**country.model_dump())
-    session.add(db_country)
-    session.commit()
-    session.refresh(db_country)
-    return db_country
 
 
 def load_csv_at_startup():
