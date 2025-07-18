@@ -42,6 +42,27 @@ services:
       timeout: 3s
       retries: 10
 
+
+  worker_email:
+    build: .
+    command: python app/workers/email_worker.py
+    volumes:
+      - .:/code
+    environment:
+      - REDIS_HOST=redis
+      - PYTHONPATH=/code
+    depends_on:
+      - redis
+
+  rq-dashboard:
+    image: eoranged/rq-dashboard
+    ports:
+      - "9181:9181"
+    environment:
+      - RQ_DASHBOARD_REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+
 volumes:
   postgres_data:
   redis_data:
