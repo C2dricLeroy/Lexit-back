@@ -4,6 +4,8 @@ from logging import getLogger
 from fastapi import APIRouter, Depends, status
 from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse
+from redis import Redis
+from rq import Queue
 from sqlalchemy.sql.functions import count
 from sqlmodel import Session, select
 from starlette.requests import Request
@@ -25,6 +27,7 @@ from app.dto.user import LoginRequest, UserCreate, UserRead
 from app.models import User
 from app.models.entry import Entry
 from app.services.user import get_current_user
+from app.tasks.email import send_email
 
 router = APIRouter()
 _logger = getLogger(__name__)
@@ -219,3 +222,15 @@ def logout(request: Request, db: Session = Depends(get_session)):
     response = JSONResponse(content={"detail": "Logged out"})
     response.delete_cookie("refresh_token")
     return response
+
+
+redis_conn = Redis(host="redis", port=6379)
+q = Queue("emails", connection=redis_conn)
+
+
+@router.get("/send-email/")
+def enqueue_email():
+    job = q.enqueue(
+        send_email, "user@example.com", "Hello", "This is the body"
+    )
+    return {"job_id": job.get_id()}
