@@ -13,6 +13,8 @@ services:
     build: .
     environment:
       - ENVIRONMENT=production
+    env_file:
+      - .env
     volumes:
       - .:/code
       - ./logs:/var/log/lexit
@@ -48,6 +50,8 @@ services:
     command: python app/workers/email_worker.py
     volumes:
       - .:/code
+    env_file:
+      - .env
     environment:
       - REDIS_HOST=redis
       - PYTHONPATH=/code
