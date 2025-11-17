@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
     VERSION: float = 0.4
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    BREVO_API_KEY: str = Field(json_schema_extra={"env_var": "BREVO_API_KEY"})
 
     @property
     def DEBUG(self) -> bool:

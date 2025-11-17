@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse
 from redis import Redis
-from rq import Queue
+from rq import Queue, Retry
 from sqlalchemy.sql.functions import count
 from sqlmodel import Session, select
 from starlette.requests import Request
@@ -31,6 +31,22 @@ from app.tasks.email import send_email
 
 router = APIRouter()
 _logger = getLogger(__name__)
+
+
+redis_conn = Redis(host="redis", port=6379)
+emails_queue = Queue("emails", connection=redis_conn)
+
+
+@router.get("/test/send-email")
+def enqueue_email():
+    job = emails_queue.enqueue(
+        send_email,
+        "cedricleroy28@gmail.com",
+        "Hello",
+        "This is the body",
+        retry=Retry(max=5, interval=[10, 30, 60, 120]),
+    )
+    return {"job_id": job.get_id()}
 
 
 @router.get("/", response_model=list[UserRead])
@@ -222,15 +238,3 @@ def logout(request: Request, db: Session = Depends(get_session)):
     response = JSONResponse(content={"detail": "Logged out"})
     response.delete_cookie("refresh_token")
     return response
-
-
-redis_conn = Redis(host="redis", port=6379)
-q = Queue("emails", connection=redis_conn)
-
-
-@router.get("/send-email/")
-def enqueue_email():
-    job = q.enqueue(
-        send_email, "user@example.com", "Hello", "This is the body"
-    )
-    return {"job_id": job.get_id()}
