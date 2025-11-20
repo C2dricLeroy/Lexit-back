@@ -1,8 +1,14 @@
 from app.core.email_client import api_instance, sib_api_v3_sdk
 
 
-def send_email(to: str, subject: str, html_content: str):
+def send_welcome_email(to: str):
     """Send an email."""
+    subject = "Welcome to Lexit!"
+    html_content = """
+    <h1>Welcome!</h1>
+    <p>Thanks for signing up to Lexit.</p>
+    """
+
     email = sib_api_v3_sdk.SendSmtpEmail(
         to=[{"email": to}],
         sender={"email": "pro.cedricleroy@gmail.com", "name": "Lexit"},

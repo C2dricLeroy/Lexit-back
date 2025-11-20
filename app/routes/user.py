@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse
 from redis import Redis
-from rq import Queue, Retry
+from rq import Queue
 from sqlalchemy.sql.functions import count
 from sqlmodel import Session, select
 from starlette.requests import Request
@@ -27,26 +27,13 @@ from app.dto.user import LoginRequest, UserCreate, UserRead
 from app.models import User
 from app.models.entry import Entry
 from app.services.user import get_current_user
-from app.tasks.email import send_email
+from app.tasks.email import send_welcome_email
 
 router = APIRouter()
 _logger = getLogger(__name__)
 
-
 redis_conn = Redis(host="redis", port=6379)
-emails_queue = Queue("emails", connection=redis_conn)
-
-
-@router.get("/test/send-email")
-def enqueue_email():
-    job = emails_queue.enqueue(
-        send_email,
-        "cedricleroy28@gmail.com",
-        "Hello",
-        "This is the body",
-        retry=Retry(max=5, interval=[10, 30, 60, 120]),
-    )
-    return {"job_id": job.get_id()}
+email_queue = Queue("emails", connection=redis_conn)
 
 
 @router.get("/", response_model=list[UserRead])
@@ -105,6 +92,11 @@ def create_user(
     request: Request, user: UserCreate, session: Session = Depends(get_session)
 ):
     """Create a new user."""
+    existing = session.exec(
+        select(User).where(User.email == user.email)
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
     db_user = db_user = User(
         username=user.username,
         email=user.email,
@@ -115,6 +107,7 @@ def create_user(
     session.add(db_user)
     session.commit()
     session.refresh(db_user)
+    email_queue.enqueue(send_welcome_email, str(db_user.email))
     return db_user
 
 
