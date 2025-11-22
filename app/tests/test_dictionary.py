@@ -1,3 +1,4 @@
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -5,7 +6,11 @@ from fastapi.exceptions import HTTPException
 from sqlalchemy.exc import IntegrityError
 from starlette.requests import Request
 
-from app.dto.dictionary import DictionaryCreate, DictionaryUpdate
+from app.dto.dictionary import (
+    DictionaryCreate,
+    DictionaryRead,
+    DictionaryUpdate,
+)
 from app.models.dictionary import Dictionary
 from app.models.language import Language
 from app.models.user import User
@@ -49,17 +54,14 @@ def test_create_dictionary_success():
         target_language_id=1,
     )
 
-    mock_source_language = MagicMock(id=1)
-    mock_target_language = MagicMock(id=1)
-
     with patch(
         "app.routes.dictionary.compute_display_name",
         return_value=Dictionary(
+            id=1,
             name="Test Dictionary",
-            source_language=mock_source_language,
-            target_language=mock_target_language,
+            source_language_id=1,
+            target_language_id=1,
             display_name="Test Dictionary (en → fr)",
-            user_id=1,
         ),
     ):
         result = create_dictionary(
@@ -67,9 +69,8 @@ def test_create_dictionary_success():
         )
 
         assert result.name == "Test Dictionary"
-        assert result.source_language == mock_source_language
-        assert result.target_language == mock_target_language
-        assert result.user_id == 1
+        assert result.source_language_id == 1
+        assert result.target_language_id == 1
         assert mock_session.commit.called
         assert mock_session.refresh.called
         assert len(mock_user_from_db.dictionaries) == 1
@@ -153,7 +154,6 @@ def test_get_dictionaries():
             display_name="English to French (en → fr)",
             source_language_id=1,
             target_language_id=2,
-            user_id=1,
         ),
         Dictionary(
             id=2,
@@ -161,8 +161,26 @@ def test_get_dictionaries():
             display_name="English to Spanish (en → es)",
             source_language_id=1,
             target_language_id=3,
-            user_id=1,
         ),
+    ]
+
+    expected = [
+        DictionaryRead(
+            id=d.id,
+            name=d.name,
+            description=d.description if hasattr(d, "description") else None,
+            display_name=d.display_name,
+            source_language_id=d.source_language_id,
+            target_language_id=d.target_language_id,
+            created_at=(
+                d.created_at if hasattr(d, "created_at") else datetime.now()
+            ),
+            updated_at=(
+                d.updated_at if hasattr(d, "updated_at") else datetime.now()
+            ),
+            entry_count=1,  # si c’est fixé par get_dictionaries
+        )
+        for d in mock_dictionaries
     ]
 
     mock_query_result = MagicMock()
@@ -171,11 +189,11 @@ def test_get_dictionaries():
 
     result = get_dictionaries(request, mock_session)
 
-    assert result == mock_dictionaries
+    assert result == expected
     assert len(result) == 2
     assert result[0].name == "English to French"
     assert result[1].name == "English to Spanish"
-    mock_session.exec.assert_called_once()
+    mock_session.exec.assert_called()
     mock_query_result.all.assert_called_once()
 
 
@@ -208,17 +226,29 @@ def test_get_dictionary_by_id_success():
         user_id=1,
     )
 
+    expected = DictionaryRead(
+        id=mock_dictionary.id,
+        name=mock_dictionary.name,
+        description=getattr(mock_dictionary, "description", None),
+        display_name=mock_dictionary.display_name,
+        source_language_id=mock_dictionary.source_language_id,
+        target_language_id=mock_dictionary.target_language_id,
+        created_at=getattr(mock_dictionary, "created_at", datetime.now()),
+        updated_at=getattr(mock_dictionary, "updated_at", datetime.now()),
+        entry_count=1,
+    )
+
     mock_query_result = MagicMock()
     mock_query_result.first.return_value = mock_dictionary
     mock_session.exec.return_value = mock_query_result
 
     result = get_dictionary_by_id(request, 1, mock_session)
 
-    assert result == mock_dictionary
+    assert result == expected
     assert result.id == 1
     assert result.name == "English to French"
     assert result.display_name == "English to French (en → fr)"
-    mock_session.exec.assert_called_once()
+    mock_session.exec.assert_called()
     mock_query_result.first.assert_called_once()
 
 

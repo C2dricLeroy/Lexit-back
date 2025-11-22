@@ -1,9 +1,11 @@
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.exceptions import HTTPException
 from starlette.requests import Request
 
+from app.dto.dictionary import DictionaryRead
 from app.dto.user import UserCreate
 from app.models.dictionary import Dictionary
 from app.models.user import User
@@ -52,10 +54,10 @@ def test_get_users():
 
     result = get_users(request, mock_session)
 
-    assert result == mock_users
-    assert len(result) == 2
-    assert result[0].username == "user1"
-    assert result[1].username == "user2"
+    assert result == [mock_users]
+    assert len(result[0]) == 2
+    assert result[0][0].username == "user1"
+    assert result[0][1].username == "user2"
     mock_session.exec.assert_called_once()
     mock_query_result.all.assert_called_once()
 
@@ -131,6 +133,21 @@ def test_get_user_dictionaries_multiple():
         ),
     ]
 
+    expected = [
+        DictionaryRead(
+            id=d.id,
+            name=d.name,
+            description=getattr(d, "description", None),
+            display_name=d.display_name,
+            source_language_id=d.source_language_id,
+            target_language_id=d.target_language_id,
+            created_at=getattr(d, "created_at", datetime.now()),
+            updated_at=getattr(d, "updated_at", datetime.now()),
+            entry_count=1,
+        )
+        for d in mock_dictionaries
+    ]
+
     mock_user = MagicMock(spec=User)
     mock_user.id = 1
     mock_user.dictionaries = mock_dictionaries
@@ -146,12 +163,10 @@ def test_get_user_dictionaries_multiple():
         session=mock_session,
     )
 
-    assert result == mock_dictionaries
+    assert result == expected
     assert len(result) == 2
     assert result[0].name == "English to French"
     assert result[1].name == "English to Spanish"
-    assert result[0].user_id == 1
-    assert result[1].user_id == 1
 
 
 def test_create_user_success():
@@ -166,21 +181,26 @@ def test_create_user_success():
         is_superuser=False,
     )
 
+    mock_session.exec.return_value.first.return_value = None
+
     with patch(
         "app.routes.user.hash_password",
         return_value="hashed_password123",  # NOSONAR
     ):
-        result = create_user(request, user_data, mock_session)
+        with patch("app.routes.user.email_queue.enqueue") as mock_enqueue:
 
-        mock_session.add.assert_called_once()
-        mock_session.commit.assert_called_once()
-        mock_session.refresh.assert_called_once()
+            result = create_user(request, user_data, mock_session)
 
-        assert result.username == "newuser"
-        assert result.email == "newuser@example.com"
-        assert result.hashed_password == "hashed_password123"  # NOSONAR
-        assert result.is_active is True
-        assert result.is_superuser is False
+            mock_enqueue.assert_called_once()
+            mock_session.add.assert_called_once()
+            mock_session.commit.assert_called_once()
+            mock_session.refresh.assert_called_once()
+
+            assert result.username == "newuser"
+            assert result.email == "newuser@example.com"
+            assert result.hashed_password == "hashed_password123"  # NOSONAR
+            assert result.is_active is True
+            assert result.is_superuser is False
 
 
 def test_get_current_user():
