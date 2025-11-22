@@ -2,6 +2,8 @@ from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
+from redis import Redis
+from rq import Queue
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -13,8 +15,12 @@ from app.database import get_session
 from app.dto.socialLogin import SocialLoginRequest
 from app.models.user import User
 from app.models.userProvider import UserProvider
+from app.tasks.email import send_welcome_email
 
 router = APIRouter()
+
+redis_conn = Redis(host="redis", port=6379)
+email_queue = Queue("emails", connection=redis_conn)
 
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 
@@ -54,6 +60,7 @@ async def social_login(
         user = User(email=email, name=name)
         session.add(user)
         session.flush()
+        email_queue.enqueue(send_welcome_email, str(user.email))
 
         user_provider = UserProvider(
             provider="google", provider_user_id=google_user_id, user_id=user.id
