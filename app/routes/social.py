@@ -57,10 +57,12 @@ async def social_login(
     if user_provider:
         user = user_provider.user
     else:
-        user = User(email=email, name=name)
+        user = User(email=email, username=name)
         session.add(user)
         session.flush()
-        email_queue.enqueue(send_welcome_email, str(user.email))
+        email_queue.enqueue(
+            send_welcome_email, str(user.email), str(user.username)
+        )
 
         user_provider = UserProvider(
             provider="google", provider_user_id=google_user_id, user_id=user.id
