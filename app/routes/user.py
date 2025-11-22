@@ -40,7 +40,8 @@ email_queue = Queue("emails", connection=redis_conn)
 @limiter.limit("5/minute")
 def get_users(request: Request, session: Session = Depends(get_session)):
     """Return all users."""
-    return session.exec(select(User)).all()
+    users = session.exec(select(User)).all()
+    return [users]
 
 
 @router.get("/me", response_model=UserRead)
@@ -77,7 +78,7 @@ def get_user_dictionaries(
     return results
 
 
-@router.get("/{user_id}", response_model=list[UserRead])
+@router.get("/{user_id}", response_model=UserRead)
 @limiter.limit("1000/day")
 def get_user_by_id(
     request: Request, user_id: int, session: Session = Depends(get_session)
@@ -107,7 +108,9 @@ def create_user(
     session.add(db_user)
     session.commit()
     session.refresh(db_user)
-    email_queue.enqueue(send_welcome_email, str(db_user.email))
+    email_queue.enqueue(
+        send_welcome_email, str(db_user.email), str(db_user.username)
+    )
     return db_user
 
 

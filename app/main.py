@@ -7,6 +7,7 @@ from logging import INFO, basicConfig, getLogger
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 
 import app.core.logger  # noqa: F401
@@ -68,6 +69,8 @@ def include_all_routers(app: FastAPI):
 
 
 app = get_app()  # noqa: F811
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 app.state.limiter = limiter
 
