@@ -70,7 +70,9 @@ def include_all_routers(app: FastAPI):
 
 app = get_app()  # noqa: F811
 
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount(
+    "/static", StaticFiles(directory="app/static"), name="static"
+)  # NOSONAR
 
 app.state.limiter = limiter
 

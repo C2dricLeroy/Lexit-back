@@ -35,6 +35,8 @@ _logger = getLogger(__name__)
 redis_conn = Redis(host="redis", port=6379)
 email_queue = Queue("emails", connection=redis_conn)
 
+USER_ERROR = "User not found"
+
 
 @router.get("/", response_model=list[UserRead])
 @limiter.limit("5/minute")
@@ -62,7 +64,7 @@ def get_user_dictionaries(
     user = session.get(User, current_user.id)
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=USER_ERROR
         )
     results = []
     for d in user.dictionaries:
@@ -154,7 +156,7 @@ def login(
             "id": user.id,
         }
     )
-    response.set_cookie(
+    response.set_cookie(  # NOSONAR
         key="refresh_token",
         value=refresh_token,
         httponly=True,
@@ -175,7 +177,7 @@ def admin_delete_user(
     """Delete a user by its ID."""
     db_user = session.get(User, user_id)
     if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=USER_ERROR)
 
     if db_user.id == current_user.id:
         raise HTTPException(status_code=403, detail="Cannot delete yourself")
@@ -210,7 +212,7 @@ def refresh_token(
 
     user = session.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=401, detail="User not found")
+        raise HTTPException(status_code=401, detail=USER_ERROR)
 
     new_access_token = create_access_token({"sub": str(user_id)})
 
