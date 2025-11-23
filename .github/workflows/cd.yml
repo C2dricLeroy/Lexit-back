@@ -13,7 +13,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Send files to server
-      uses: appleboy/scp-action@master
+      uses: appleboy/scp-action@7179e72a3fa4d4c33870a471708fda724fae7596
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USERNAME }}
@@ -22,7 +22,7 @@ jobs:
         target: api
 
     - name: Restart Docker containers (safe)
-      uses: appleboy/ssh-action@v1.0.3
+      uses: appleboy/ssh-action@2500896589ef8f7247069a56136f8dc177c27ccf
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USERNAME }}
