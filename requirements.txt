@@ -13,3 +13,4 @@ alembic==1.16.1
 rq==2.4.0
 sib_api_v3_sdk
 Jinja2==3.1.6
+pytest-asyncio

@@ -15,6 +15,10 @@ from app.routes.user import (
     get_user_by_id,
     get_user_dictionaries,
     get_users,
+    login,
+    logout,
+    read_me,
+    refresh_token,
 )
 from app.services.user import get_current_user
 
@@ -323,3 +327,103 @@ def test_admin_delete_user_not_superuser():
         == "You are not authorized to delete this user."
     )
     assert http_exeception.value.status_code == 403
+
+
+def test_read_me():
+    """Test that read_me returns the current user."""
+    mock_session = MagicMock()
+    mock_user = User(
+        id=1,
+        username="testuser",
+        email="test@example.com",
+        hashed_password="hashed_password",
+    )
+
+    mock_session.get.return_value = mock_user
+
+    result = read_me(request, mock_user)
+    assert result == mock_user
+
+
+def test_login_success():
+    """Test that login returns a success response."""
+    mock_session = MagicMock()
+    mock_user = User(
+        id=1,
+        username="testuser",
+        email="test@example.com",
+        hashed_password="hashed_password",
+    )
+
+    mock_session.exec.return_value.first.return_value = mock_user
+
+    request = MagicMock(spec=Request)
+    request.headers = {"user-agent": "pytest"}
+
+    login_request = MagicMock()
+    login_request.email = "test@example.com"
+    login_request.password = "password"
+
+    with patch("app.routes.user.check_password", return_value=True), patch(
+        "app.routes.user.create_access_token", return_value="access_token"
+    ), patch(
+        "app.routes.user.create_refresh_token", return_value="refresh_token"
+    ), patch(
+        "app.routes.user.set_refresh_token"
+    ) as mock_set_refresh_token:
+
+        response = login(request, login_request, mock_session)
+
+        data = response.body.decode("utf-8")
+        assert '"access_token":"access_token"' in data
+        assert response.status_code == 200
+
+        mock_session.exec.assert_called_once()
+        mock_set_refresh_token.assert_called_once_with(
+            db=mock_session,
+            user_id=1,
+            token="refresh_token",
+            user_agent="pytest",
+        )
+
+
+def test_refresh_token_success():
+    """Test that refresh_token returns a success response."""
+    mock_session = MagicMock()
+    mock_user = User(
+        id=1,
+        username="testuser",
+        email="test@example.com",
+        hashed_password="hashed_password",
+    )
+
+    mock_session.get.return_value = mock_user
+
+    request = MagicMock(spec=Request)
+
+    with patch(
+        "app.routes.user.decode_refresh_token", return_value={"sub": "1"}
+    ):
+        response = refresh_token(request, mock_session)
+
+        assert response.status_code == 200
+
+
+def test_logout_success():
+    """Test that logout returns a sucess response."""
+    mock_session = MagicMock()
+
+    mock_user = User(
+        id=1,
+        username="testuser",
+        email="tets@example.com",
+        hashed_password="hashed_password",
+    )
+
+    mock_session.get.return_value = mock_user
+
+    request = MagicMock(spec=Request)
+
+    with patch("app.routes.user.invalidate_refresh_token"):
+        response = logout(request, mock_session)
+        assert response.status_code == 200
