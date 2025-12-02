@@ -17,8 +17,8 @@ RUN chmod +x /code/entrypoint.sh
 
 COPY ./app /code/app
 
-RUN groupadd -r appuser && \
-    useradd -r -g appuser appuser && \
+RUN groupadd -r appuser || true && \
+    useradd -r -g appuser appuser || true && \
     chown -R appuser:appuser /code
 
 USER appuser

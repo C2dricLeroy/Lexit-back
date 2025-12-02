@@ -14,4 +14,4 @@ class UserRefreshToken(SQLModel, table=True):
     refresh_token: str = Field(index=True)
     user_agent: Optional[str] = Field()
     revoked: bool = Field(default=False)
-    created_at: datetime = Field(default=datetime.now())
+    created_at: datetime = Field(default_factory=datetime.now)

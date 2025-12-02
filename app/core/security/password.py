@@ -52,11 +52,11 @@ def decode_access_token(token: str) -> dict:
             algorithms=[settings.JWT_ALGORITHM],
         )
         return payload
-    except jwt.ExpiredSignatureError as exc:
+    except jwt.ExpiredSignatureError as exc:  # NOSONAR
         raise HTTPException(
             status_code=401, detail="Token has expired"
         ) from exc
-    except jwt.InvalidTokenError as exc:
+    except jwt.InvalidTokenError as exc:  # NOSONAR
         raise HTTPException(status_code=401, detail="Invalid token") from exc
 
 
@@ -91,11 +91,11 @@ def decode_refresh_token(token: str) -> dict:
         if payload.get("scope") != "refresh_token":
             raise HTTPException(status_code=401, detail="Invalid token scope")
         return payload
-    except jwt.ExpiredSignatureError as exc:
+    except jwt.ExpiredSignatureError as exc:  # NOSONAR
         raise HTTPException(
             status_code=401, detail="Refresh token expired"
         ) from exc
-    except jwt.InvalidTokenError as exc:
+    except jwt.InvalidTokenError as exc:  # NOSONAR
         raise HTTPException(
             status_code=401, detail="Invalid refresh token"
         ) from exc

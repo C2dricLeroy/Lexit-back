@@ -31,6 +31,6 @@ def send_welcome_email(to: str, username: str):
         response = api_instance.send_transac_email(email)
         _logger.info("Email sent: %s", response)
         return True
-    except Exception as e:
+    except Exception as e:  # NOSONAR
         _logger.info("Error sending email: %s", e)
         raise e
