@@ -53,9 +53,60 @@ def get_dictionary_words_over_time(
 
         series[dictionary_id].data.append(
             WordsOverTimePoint(
-                date=bucket.date(),  # bucket = datetime
-                count=previous + count,  # cumulatif
+                date=bucket.date(),
+                count=previous + count,
             )
         )
 
-    return list(series.values())
+    return list[WordsOverTimeRead](series.values())
+
+
+@router.get("/words-over-time/{id}", response_model=WordsOverTimeRead)
+def get_words_over_time_by_dictionary(
+    dictionary_id: int,
+    request: Request,
+    granularity: TimeGranularity = TimeGranularity.day,
+    session: Session = Depends(get_session),
+):
+    """Return the number of entries by dictionnary given the granularity time."""
+    date_bucket = get_date_trunc(granularity)
+
+    stmt = (
+        select(
+            Entry.dictionary_id,
+            Dictionary.name,
+            date_bucket.label("bucket"),
+            func.count(Entry.id).label("count"),
+        )
+        .join(Dictionary, Dictionary.id == Entry.dictionary_id)
+        .where(Entry.dictionary_id == dictionary_id)  # Le filtre ici!
+        .group_by(Entry.dictionary_id, Dictionary.name, date_bucket)
+        .order_by(date_bucket)
+    )
+
+    rows = session.exec(stmt).all()
+
+    if not rows:
+        return WordsOverTimeRead(
+            dictionary_id=dictionary_id,
+            dictionary_name="",
+            data=[],
+        )
+
+    result = WordsOverTimeRead(
+        dictionary_id=dictionary_id,
+        dictionary_name=rows[0][1],
+        data=[],
+    )
+
+    cumulative = 0
+    for _, _, bucket, count in rows:
+        cumulative += count
+        result.data.append(
+            WordsOverTimePoint(
+                date=bucket.date(),
+                count=cumulative,
+            )
+        )
+
+    return result
